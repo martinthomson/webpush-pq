@@ -35,6 +35,8 @@ informative:
     title: WebPush Encryption using Symmetric Ciphers
     author:
       - name: Martin Thomson
+    seriesinfo:
+      Internet-Draft: draft-thomson-webpush-sym-latest
     date: draft-thomson-webpush-sym-date
 
   CDJZ:

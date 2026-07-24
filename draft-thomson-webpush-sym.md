@@ -37,6 +37,8 @@ informative:
     title: WebPush Encryption using HPKE
     author:
       - name: Martin Thomson
+    seriesinfo:
+      Internet-Draft: draft-thomson-webpush-hpke-latest
     date: draft-thomson-webpush-hpke-date
 
   CDJZ:
