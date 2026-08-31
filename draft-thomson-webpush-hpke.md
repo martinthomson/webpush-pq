@@ -95,6 +95,15 @@ Its companion, {{WEBPUSH-SYM}} is an alternative to this approach.
 {{WEBPUSH-SYM}} describes how to encode messages
 using symmetric cryptography.
 
+Of the two options, this is the most conservative.
+It retains the same properties as {{?RFC8291}} with respect to key compromise.
+However, it is also grossly less efficient
+due to the massive overhead of current PQ KEMs.
+If it is feasible to rotate client keys more frequently,
+the design in {{WEBPUSH-SYM}} is likely a better choice
+as it is simpler and more efficient.
+
+
 # Conventions and Definitions
 
 {::boilerplate bcp14-tagged}

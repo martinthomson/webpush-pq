@@ -91,6 +91,13 @@ Its companion, {{WEBPUSH-HPKE}} is an alternative to this approach.
 {{WEBPUSH-HPKE}} describes how to encode messages
 using Hybrid Public Key Encryption (HPKE).
 
+If it is feasible to perform key rotation
+on a sufficiently frequent cadence,
+this design might be the more feasible of the two options.
+That being the case,
+this approach is by far the most efficient of the two options.
+
+
 # Conventions and Definitions
 
 {::boilerplate bcp14-tagged}
@@ -386,6 +393,11 @@ for all messages sent under the same key,
 in the past or future.
 Knowledge of the key also grants the ability to forge arbitrary new messages.
 
+The best way to manage this risk is more frequent key rotation.
+Whether it is possible to reliably rotate keys
+will determine whether this design is feasiable
+relative to one that uses a PQ KEM, like {{WEBPUSH-HPKE}}.
+
 
 ## Nonce Collisions {#collision}
 
@@ -521,6 +533,7 @@ Change controller:
 # Acknowledgments
 {:numbered="false"}
 
-David Benjamin insisted that we attempt to use symmetric keys.
-This is because introducing a scheme that provides post-compromise security,
-such as the one in {{WEBPUSH-HPKE}} is somewhat more inefficient than this scheme.
+David Benjamin and Sebastian Poreba suggested
+that symmetric keys might be preferable
+to an asymmetric PQ approach (such as {{WEBPUSH-HPKE}})
+due to the significant overheads of the PQ KEM.
