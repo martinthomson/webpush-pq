@@ -4,9 +4,9 @@
 
 Web-Based Push Notifications                                  M. Thomson
 Internet-Draft                                                   Mozilla
-Obsoletes: 8291 (if approved)                               21 July 2026
+Obsoletes: 8291 (if approved)                             31 August 2026
 Intended status: Standards Track                                        
-Expires: 22 January 2027
+Expires: 4 March 2027
 
 
                WebPush Encryption using Symmetric Ciphers
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 22 January 2027.
+   This Internet-Draft will expire on 4 March 2027.
 
 Copyright Notice
 
@@ -111,6 +111,11 @@ Table of Contents
    This document is one of a pair.  Its companion, [WEBPUSH-HPKE] is an
    alternative to this approach.  [WEBPUSH-HPKE] describes how to encode
    messages using Hybrid Public Key Encryption (HPKE).
+
+   If it is feasible to perform key rotation on a sufficiently frequent
+   cadence, this design might be the more feasible of the two options.
+   That being the case, this approach is by far the most efficient of
+   the two options.
 
 2.  Conventions and Definitions
 
@@ -370,6 +375,11 @@ Table of Contents
    under the same key, in the past or future.  Knowledge of the key also
    grants the ability to forge arbitrary new messages.
 
+   The best way to manage this risk is more frequent key rotation.
+   Whether it is possible to reliably rotate keys will determine whether
+   this design is feasiable relative to one that uses a PQ KEM, like
+   [WEBPUSH-HPKE].
+
 8.2.  Nonce Collisions
 
    Protection of two different messages with an identical nonce leads to
@@ -451,9 +461,9 @@ Table of Contents
    [AEAD-LIMITS]
               Günther, F., Thomson, M., and C. A. Wood, "Usage Limits on
               AEAD Algorithms", Work in Progress, Internet-Draft, draft-
-              irtf-cfrg-aead-limits-11, 4 December 2025,
+              irtf-cfrg-aead-limits-12, 7 August 2026,
               <https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-
-              aead-limits-11>.
+              aead-limits-12>.
 
    [HPKE]     Barnes, R., Bhargavan, K., Lipp, B., and C. A. Wood,
               "Hybrid Public Key Encryption", Work in Progress,
@@ -514,14 +524,16 @@ Table of Contents
               <https://www.rfc-editor.org/rfc/rfc8291>.
 
    [WEBPUSH-HPKE]
-              Thomson, M., "WebPush Encryption using HPKE", July 2026.
+              Thomson, M., "WebPush Encryption using HPKE", Work in
+              Progress, Internet-Draft, draft-thomson-webpush-hpke, 31
+              August 2026, <https://datatracker.ietf.org/doc/html/draft-
+              thomson-webpush-hpke>.
 
 Acknowledgments
 
-   David Benjamin insisted that we attempt to use symmetric keys.  This
-   is because introducing a scheme that provides post-compromise
-   security, such as the one in [WEBPUSH-HPKE] is somewhat more
-   inefficient than this scheme.
+   David Benjamin and Sebastian Poreba suggested that symmetric keys
+   might be preferable to an asymmetric PQ approach (such as
+   [WEBPUSH-HPKE]) due to the significant overheads of the PQ KEM.
 
 Author's Address
 

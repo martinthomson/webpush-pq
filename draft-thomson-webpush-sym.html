@@ -18,14 +18,14 @@ with Web Push.
 <meta content="draft-thomson-webpush-sym-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.0
-    Python 3.14.5
+    Python 3.14.7
     ConfigArgParse 1.7.5
     google-i18n-address 3.1.1
     intervaltree 3.2.1
     Jinja2 3.1.6
     lxml 6.1.1
     natsort 8.4.0
-    platformdirs 4.10.1
+    platformdirs 4.11.5
     pycountry 24.6.1
     PyYAML 6.0.3
     requests 2.33.1
@@ -65,7 +65,6 @@ with Web Push.
   src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
   unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
-
 @font-face {
   font-family: 'Lora';
   font-style: italic;
@@ -114,7 +113,6 @@ with Web Push.
   src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
-
 @font-face {
   font-family: 'Lora';
   font-style: normal;
@@ -179,7 +177,6 @@ with Web Push.
   font-display: swap;
   src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
 }
 
 @font-face {
@@ -1048,11 +1045,11 @@ svg {
 <thead><tr>
 <td class="left">Internet-Draft</td>
 <td class="center">WebPush Encryption using Symmetric Ciphe</td>
-<td class="right">July 2026</td>
+<td class="right">August 2026</td>
 </tr></thead>
 <tfoot><tr>
 <td class="left">Thomson</td>
-<td class="center">Expires 22 January 2027</td>
+<td class="center">Expires 4 March 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1068,12 +1065,12 @@ svg {
 <a href="https://www.rfc-editor.org/rfc/rfc8291" class="eref">8291</a> (if approved)</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-07-21" class="published">21 July 2026</time>
+<time datetime="2026-08-31" class="published">31 August 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-01-22">22 January 2027</time></dd>
+<dd class="expires"><time datetime="2027-03-04">4 March 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1125,7 +1122,7 @@ with Web Push.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 22 January 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 4 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1251,6 +1248,11 @@ That system is not described in this document.<a href="#section-1-2" class="pilc
 Its companion, <span>[<a href="#WEBPUSH-HPKE" class="cite xref">WEBPUSH-HPKE</a>]</span> is an alternative to this approach.
 <span>[<a href="#WEBPUSH-HPKE" class="cite xref">WEBPUSH-HPKE</a>]</span> describes how to encode messages
 using Hybrid Public Key Encryption (HPKE).<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">If it is feasible to perform key rotation
+on a sufficiently frequent cadence,
+this design might be the more feasible of the two options.
+That being the case,
+this approach is by far the most efficient of the two options.<a href="#section-1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conventions-and-definitions">
@@ -1634,6 +1636,10 @@ A key compromise leads to loss of confidentiality
 for all messages sent under the same key,
 in the past or future.
 Knowledge of the key also grants the ability to forge arbitrary new messages.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<p id="section-8.1-2">The best way to manage this risk is more frequent key rotation.
+Whether it is possible to reliably rotate keys
+will determine whether this design is feasiable
+relative to one that uses a PQ KEM, like <span>[<a href="#WEBPUSH-HPKE" class="cite xref">WEBPUSH-HPKE</a>]</span>.<a href="#section-8.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="collision">
@@ -1822,7 +1828,7 @@ as defined in <a href="#message" class="auto internal xref">Section 5</a>.<a hre
 <dl class="references">
 <dt id="AEAD-LIMITS">[AEAD-LIMITS]</dt>
         <dd>
-<span class="refAuthor">Günther, F.</span>, <span class="refAuthor">Thomson, M.</span>, and <span class="refAuthor">C. A. Wood</span>, <span class="refTitle">"Usage Limits on AEAD Algorithms"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-irtf-cfrg-aead-limits-11</span>, <time datetime="2025-12-04" class="refDate">4 December 2025</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-aead-limits-11">https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-aead-limits-11</a>&gt;</span>. </dd>
+<span class="refAuthor">Günther, F.</span>, <span class="refAuthor">Thomson, M.</span>, and <span class="refAuthor">C. A. Wood</span>, <span class="refTitle">"Usage Limits on AEAD Algorithms"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-irtf-cfrg-aead-limits-12</span>, <time datetime="2026-08-07" class="refDate">7 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-aead-limits-12">https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-aead-limits-12</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="HPKE">[HPKE]</dt>
         <dd>
@@ -1879,7 +1885,7 @@ as defined in <a href="#message" class="auto internal xref">Section 5</a>.<a hre
 <dd class="break"></dd>
 <dt id="WEBPUSH-HPKE">[WEBPUSH-HPKE]</dt>
       <dd>
-<span class="refAuthor">Thomson, M.</span>, <span class="refTitle">"WebPush Encryption using HPKE"</span>, <time datetime="2026-07" class="refDate">July 2026</time>. </dd>
+<span class="refAuthor">Thomson, M.</span>, <span class="refTitle">"WebPush Encryption using HPKE"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-thomson-webpush-hpke</span>, <time datetime="2026-08-31" class="refDate">31 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-thomson-webpush-hpke">https://datatracker.ietf.org/doc/html/draft-thomson-webpush-hpke</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -1891,9 +1897,10 @@ as defined in <a href="#message" class="auto internal xref">Section 5</a>.<a hre
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-A-1">David Benjamin insisted that we attempt to use symmetric keys.
-This is because introducing a scheme that provides post-compromise security,
-such as the one in <span>[<a href="#WEBPUSH-HPKE" class="cite xref">WEBPUSH-HPKE</a>]</span> is somewhat more inefficient than this scheme.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<p id="appendix-A-1">David Benjamin and Sebastian Poreba suggested
+that symmetric keys might be preferable
+to an asymmetric PQ approach (such as <span>[<a href="#WEBPUSH-HPKE" class="cite xref">WEBPUSH-HPKE</a>]</span>)
+due to the significant overheads of the PQ KEM.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
