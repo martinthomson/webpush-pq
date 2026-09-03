@@ -1,8 +1,8 @@
-<!-- regenerate: on (set to off if you edit this file) -->
+<!-- regenerate: off -->
 
-# WEBPUSH Drafts
+# Web Push Post Quantum Cryptography
 
-This is the working area for individual Internet-Drafts.
+This is the working area for addressing the problem of PQ ciphers for Web Push.
 
 ## WebPush Encryption using HPKE
 
