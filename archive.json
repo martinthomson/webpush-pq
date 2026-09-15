@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2026-09-13T03:29:14.875584+00:00",
+  "timestamp": "2026-09-15T03:40:36.009930+00:00",
   "repo": "martinthomson/webpush-pq",
   "labels": [
     {
@@ -49,6 +49,31 @@
       "color": "ffffff"
     }
   ],
-  "issues": [],
+  "issues": [
+    {
+      "number": 1,
+      "id": "I_kwDOTbSVtc8AAAABRLK_HQ",
+      "title": "Security Considerations: Post-Compromise Security",
+      "url": "https://github.com/martinthomson/webpush-pq/issues/1",
+      "state": "OPEN",
+      "author": "dennisjackson",
+      "authorAssociation": "NONE",
+      "assignees": [],
+      "labels": [],
+      "body": "8.1 of draft-thomson-webpush-sym states: \n\n> This message encryption scheme does not provide confidentiality of messages that are sent after a key becomes compromised. A key compromise leads to loss of confidentiality for all messages sent under the same key, in the past or future. \n\nThis is also true of draft-thomson-webpush-hpke for the server's HPKE key. Both systems only achieve forward secrecy once the server's long term key material is destroyed and only achieve post compromise security when the keys have been (securely) rotated.\n\nWhen thinking about the different properties between the two schemes, I think it's the lack of forward secrecy with respect to the client compromise that separates the two. Once a client has done a HPKE encap it can throw away the old secret, but the symmetric client has to keep that secret around. \n\nIn light of the overhead of PQ HPKE and all the other things that go wrong when clients get compromised, it probably makes sense to go for the symmetric option and try to bake in a good rotation flow? ",
+      "createdAt": "2026-09-14T09:20:21Z",
+      "updatedAt": "2026-09-15T01:03:34Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "martinthomson",
+          "authorAssociation": "OWNER",
+          "body": "> This is also true of draft-thomson-webpush-hpke for the server's HPKE key. \n\nI think you might have this a little backwards.  In the HPKE-based design -- and the present one, which is also asymmetric -- the client is the one that holds a long term key.  The expectation is that the server is generating a fresh ephemeral key for every message.  My understanding is that this is necessary, otherwise you get a two-time pad under either asymmetric design.\n\n> When thinking about the different properties between the two schemes, I think it's the lack of forward secrecy with respect to the client compromise that separates the two. Once a client has done a HPKE encap it can throw away the old secret, but the symmetric client has to keep that secret around.\n\nFlip that around and then I think it's right.  That is indeed the problem I'm concerned with.  A server that sends messages to many clients, if it were compromised, no messages are revealed in the present design, but a server compromise risks every message it ever sent if we move to a symmetric key.  Obviously, clients that hold long term keys are a risk to every message they have ever received (and might receive for some time) if they are compromised, but those are a diverse and distributed population and each has to be compromised separately.  That makes me less concerned.\n\nDoes that inversion change your conclusion at all?",
+          "createdAt": "2026-09-14T23:52:06Z",
+          "updatedAt": "2026-09-15T01:03:34Z"
+        }
+      ]
+    }
+  ],
   "pulls": []
 }
