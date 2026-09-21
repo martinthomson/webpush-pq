@@ -254,7 +254,7 @@ This is the same process that allows this scheme to be deployed
 as a replacement for the scheme in RFC 8291.
 
 
-## Overview
+## This Document
 
 This document describes the push message encryption design
 in three parts:
@@ -322,7 +322,7 @@ Encrypted Push Message {
   Encrypted Message Contents (..),
 }
 ~~~
-{: #f-message title="HPKE-Protected Push Message Format"}
+{: #f-message title="Encrypted Push Message Format"}
 
 Processes for the application server that sends messages
 are included in {{encrypt}};
@@ -647,7 +647,7 @@ An implementation could choose to limit the time that secrets are retained
 after a message with a higher sequence number has been received.
 
 
-## Rekeying {#rekey}
+# Rekeying {#rekey}
 
 A user agent MUST supply fresh secrets to an application server
 on request.
@@ -655,7 +655,8 @@ on request.
 Propagating secrets to application server instances can take time,
 during which messages could be protected with older secrets.
 For this reason, user agents MUST retain old secrets
-until newer secrets are used.
+until newer secrets are  used.
+That is, a message is successfully decrypting using a newer secret.
 
 Once a newer secret is used,
 a user agent MUST destroy old secrets after a configured period.
@@ -663,6 +664,10 @@ This document does not specify how long to retain secrets,
 but any period needs to account for typical message delivery delays
 that might lead to reordering
 and the degree to which message loss can be tolerated.
+Longer periods are more tolerant,
+but carry greater risk
+if the old secret has been or will be compromised
+before it is destroyed.
 
 This ties removal of old secrets to the use of a replacement
 rather than a request.
@@ -768,7 +773,7 @@ relative to one that uses a PQ KEM, like {{WEBPUSH-HPKE}}.
 See {{rekey}} for details.
 
 
-## Nonce Collisions {#collision}
+## Key and Nonce Collisions {#collision}
 
 Protection of two different messages with an identical nonce
 leads to a key compromise in many AEAD functions.
@@ -782,8 +787,14 @@ for that application server and key identifier.
 This adds a requirement on the protocols used to deliver push messages
 such that they provide duplicate detection and removal.
 
+The probably that two messages use the same key and nonce
+is negligible.
+The two values are 224 bits when combined,
+which produce a collision with at most 2<sup>n-112</sup> probability
+in any sample of 2<sup>n</sup> messages.
 
-## Key Usage and Rekeying {#key-usage}
+
+## Secret and Key Usage {#key-usage}
 
 The lack of post-compromise security in this design
 means that using the same sequence of shared secrets
@@ -791,13 +802,16 @@ for an extended period of time increases the impact of a compromise.
 All push messages from the point of compromise onward are compromised,
 giving the attacker the ability to read, modify, or forge every message.
 
-An application server SHOULD request fresh secrets as often as they are able.
+An application server SHOULD request fresh secrets as often as they are able;
+see {{rekey}}.
 
 Overuse of an AEAD key can give an attacker additional advantages
 that might lead to loss of confidentiality
 or the ability to forge messages.
 The guidance in {{?AEAD-LIMITS=I-D.irtf-cfrg-aead-limits}}
 does not apply as each secret is used for a single, small message.
+Any requirement to renew secrets is therefore driven
+by the need to manage the risk of compromise.
 
 
 ## Handling Denial of Service {#dos}
@@ -816,9 +830,10 @@ Such messages do not need to be decryptable to cause the user agent to waste eff
 A user agent can track any abnormal effort induced from each application
 and act to protect itself.
 
-Options for protection include
+If repeated abuse is detected,
+options for protection include
 limiting the rate of messages that are accepted from an application server
-or destroying push subscriptions if repeated abuse is detected.
+or destroying push subscriptions.
 
 
 ## Media Type Security {#sec-media}
@@ -870,7 +885,8 @@ Published specification:
 
 Applications that use this media type:
 
-: This type identifies an encrypted web push message.
+: push messaging applications;
+  this identifies an encrypted web push message
 
 Fragment identifier considerations:
 
