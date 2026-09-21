@@ -76,7 +76,7 @@ Table of Contents
    2.  Encryption in Web Push
      2.1.  Ratchet Design
      2.2.  Cryptographic Primitives and Agility
-     2.3.  Overview
+     2.3.  This Document
    3.  User Agent Configuration
    4.  Encrypted Push Message Format
    5.  Push Message Encryption
@@ -85,19 +85,19 @@ Table of Contents
      6.2.  User Agent Duplicate Detection
      6.3.  Simple Decryption Algorithm
      6.4.  Implementation Notes
-     6.5.  Rekeying
-   7.  Upgrading from RFC 8291
-   8.  Security Considerations
-     8.1.  Traffic Analysis
-     8.2.  Key Compromise Security
-     8.3.  Nonce Collisions
-     8.4.  Key Usage and Rekeying
-     8.5.  Handling Denial of Service
-     8.6.  Media Type Security
-   9.  IANA Considerations
-   10. References
-     10.1.  Normative References
-     10.2.  Informative References
+   7.  Rekeying
+   8.  Upgrading from RFC 8291
+   9.  Security Considerations
+     9.1.  Traffic Analysis
+     9.2.  Key Compromise Security
+     9.3.  Key and Nonce Collisions
+     9.4.  Secret and Key Usage
+     9.5.  Handling Denial of Service
+     9.6.  Media Type Security
+   10. IANA Considerations
+   11. References
+     11.1.  Normative References
+     11.2.  Informative References
    Acknowledgments
    Author's Address
 
@@ -261,12 +261,12 @@ Table of Contents
    (AEAD_AES_128_GCM) as defined in Section 5.1 of [AEAD].
 
    Cryptographic agility is addressed by defining a replacement scheme;
-   see Section 7.  Any replacement push message encryption scheme
+   see Section 8.  Any replacement push message encryption scheme
    defines new parameters in the Web API [PUSH-API].  This is the same
    process that allows this scheme to be deployed as a replacement for
    the scheme in RFC 8291.
 
-2.3.  Overview
+2.3.  This Document
 
    This document describes the push message encryption design in three
    parts:
@@ -323,7 +323,7 @@ Table of Contents
      Encrypted Message Contents (..),
    }
 
-                Figure 4: HPKE-Protected Push Message Format
+                  Figure 4: Encrypted Push Message Format
 
    Processes for the application server that sends messages are included
    in Section 5; processes for the user agent that receives messages are
@@ -620,7 +620,7 @@ Table of Contents
    retained after a message with a higher sequence number has been
    received.
 
-6.5.  Rekeying
+7.  Rekeying
 
    A user agent MUST supply fresh secrets to an application server on
    request.
@@ -628,13 +628,16 @@ Table of Contents
    Propagating secrets to application server instances can take time,
    during which messages could be protected with older secrets.  For
    this reason, user agents MUST retain old secrets until newer secrets
-   are used.
+   are used.  That is, a message is successfully decrypting using a
+   newer secret.
 
    Once a newer secret is used, a user agent MUST destroy old secrets
    after a configured period.  This document does not specify how long
    to retain secrets, but any period needs to account for typical
    message delivery delays that might lead to reordering and the degree
-   to which message loss can be tolerated.
+   to which message loss can be tolerated.  Longer periods are more
+   tolerant, but carry greater risk if the old secret has been or will
+   be compromised before it is destroyed.
 
    This ties removal of old secrets to the use of a replacement rather
    than a request.  Use of the secret proves that the application
@@ -646,7 +649,7 @@ Table of Contents
    secrets to applications when secrets requested, which can reduce the
    amount of state they need to retain.
 
-7.  Upgrading from RFC 8291
+8.  Upgrading from RFC 8291
 
    The encryption scheme in [RFC8291] identifies itself through the use
    of the encrypted "aes128gcm" content coding [RFC8188].  An
@@ -658,7 +661,7 @@ Table of Contents
    coding to indicate the use of this scheme.
 
    This document defines a media type for push messages protected with
-   this scheme; see Section 9.  This allows this message type to be
+   this scheme; see Section 10.  This allows this message type to be
    positively identified and to distinguish this encryption scheme from
    any future scheme.
 
@@ -670,9 +673,9 @@ Table of Contents
 
    No provision is made for padding in this scheme.  Padding of
    plaintext is therefore necessary to provide resistance against
-   traffic analysis; see Section 8 for details.
+   traffic analysis; see Section 9 for details.
 
-8.  Security Considerations
+9.  Security Considerations
 
    A user agent relies to some degree on two values remaining
    confidential to protect it from unwanted messages:
@@ -690,7 +693,7 @@ Table of Contents
    replacing the encryption scheme.  Any replacement of this encryption
    scheme can use those same techniques.
 
-8.1.  Traffic Analysis
+9.1.  Traffic Analysis
 
    Like the design in RFC 8291 (see Section 7 of [RFC8291]), this
    mechanism cannot obscure the presence, timing, and size of messages
@@ -704,7 +707,7 @@ Table of Contents
    padding messages.  This differs from the RFC 8291 design, which was
    able to use the padding provided by the [RFC8188] encoding.
 
-8.2.  Key Compromise Security
+9.2.  Key Compromise Security
 
    This message encryption scheme does not provide confidentiality of
    messages that are sent after a key becomes compromised.  A key
@@ -724,9 +727,9 @@ Table of Contents
    The best way to manage these risks is more frequent key rotation.
    Whether it is possible to reliably rotate keys will determine whether
    this design is feasiable relative to one that uses a PQ KEM, like
-   [WEBPUSH-HPKE].  See Section 6.5 for details.
+   [WEBPUSH-HPKE].  See Section 7 for details.
 
-8.3.  Nonce Collisions
+9.3.  Key and Nonce Collisions
 
    Protection of two different messages with an identical nonce leads to
    a key compromise in many AEAD functions.  Application servers MUST
@@ -739,7 +742,12 @@ Table of Contents
    deliver push messages such that they provide duplicate detection and
    removal.
 
-8.4.  Key Usage and Rekeying
+   The probably that two messages use the same key and nonce is
+   negligible.  The two values are 224 bits when combined, which produce
+   a collision with at most 2^(n-112) probability in any sample of 2^n
+   messages.
+
+9.4.  Secret and Key Usage
 
    The lack of post-compromise security in this design means that using
    the same sequence of shared secrets for an extended period of time
@@ -748,14 +756,16 @@ Table of Contents
    ability to read, modify, or forge every message.
 
    An application server SHOULD request fresh secrets as often as they
-   are able.
+   are able; see Section 7.
 
    Overuse of an AEAD key can give an attacker additional advantages
    that might lead to loss of confidentiality or the ability to forge
    messages.  The guidance in [AEAD-LIMITS] does not apply as each
-   secret is used for a single, small message.
+   secret is used for a single, small message.  Any requirement to renew
+   secrets is therefore driven by the need to manage the risk of
+   compromise.
 
-8.5.  Handling Denial of Service
+9.5.  Handling Denial of Service
 
    A user agent that receives multiple unwanted messages, including
    messages that are discarded, might be the target of a denial of
@@ -770,11 +780,11 @@ Table of Contents
    can track any abnormal effort induced from each application and act
    to protect itself.
 
-   Options for protection include limiting the rate of messages that are
-   accepted from an application server or destroying push subscriptions
-   if repeated abuse is detected.
+   If repeated abuse is detected, options for protection include
+   limiting the rate of messages that are accepted from an application
+   server or destroying push subscriptions.
 
-8.6.  Media Type Security
+9.6.  Media Type Security
 
    Push messages contain arbitrary content chosen by an application
    server.  Though the format does not provide explicit signaling for
@@ -782,7 +792,7 @@ Table of Contents
    How data is handled is determined by the application, which both
    sends and receives the data.
 
-9.  IANA Considerations
+10.  IANA Considerations
 
    This document registers the "application/webpush-message" content
    type to identify a push message that is protected with this scheme,
@@ -793,11 +803,11 @@ Table of Contents
    Required parameters:  N/A
    Optional parameters:  N/A
    Encoding considerations:  "binary"
-   Security considerations:  see Section 8.6
+   Security considerations:  see Section 9.6
    Interoperability considerations:  N/A
    Published specification:  this specification
-   Applications that use this media type:  This type identifies an
-      encrypted web push message.
+   Applications that use this media type:  push messaging applications;
+      this identifies an encrypted web push message
    Fragment identifier considerations:  N/A
    Additional information:  Magic number(s):  N/A
                             Deprecated alias names for this type:  N/A
@@ -810,9 +820,9 @@ Table of Contents
    Author:  see Authors' Addresses section
    Change controller:  IETF
 
-10.  References
+11.  References
 
-10.1.  Normative References
+11.1.  Normative References
 
    [AEAD]     McGrew, D., "An Interface and Algorithms for Authenticated
               Encryption", RFC 5116, DOI 10.17487/RFC5116, January 2008,
@@ -855,7 +865,7 @@ Table of Contents
               DOI 10.17487/RFC8030, December 2016,
               <https://www.rfc-editor.org/rfc/rfc8030>.
 
-10.2.  Informative References
+11.2.  Informative References
 
    [AEAD-LIMITS]
               Günther, F., Thomson, M., and C. A. Wood, "Usage Limits on
