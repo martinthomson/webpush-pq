@@ -350,17 +350,18 @@ from the plaintext of the message, `msg`, as follows:
    each time with `secret` as the `PRK` input,
    as follows:
 
-   a. An `info` input of the ASCII-encoded ({{!ASCII=RFC20}}) string "secret"
+   {: type="a"}
+   1. An `info` input of the ASCII-encoded ({{!ASCII=RFC20}}) string "secret"
       (that is, six bytes with no length prefix or null termination)
       and a length (`L`) input of 32 bytes;
       the output (`OKM`) is assigned to a variable `next_secret`.
 
-   b. An `info` input of the ASCII-encoded string "key"
+   2. An `info` input of the ASCII-encoded string "key"
       and a length (`L`) input of 16 bytes
       (corresponding to K_LEN for AEAD_AES_128_GCM);
       the output (`OKM`) is assigned to a variable `key`.
 
-   c. An `info` input of the ASCII-encoded string "nonce"
+   3. An `info` input of the ASCII-encoded string "nonce"
       and a length (`L`) input of 12 bytes
       (corresponding to `N_MIN` for AEAD_AES_128_GCM);
       the output (`OKM`) is assigned to a variable `nonce`.
@@ -526,12 +527,13 @@ To decapsulate the encrypted push message, `push_message`:
    each time with `msecret` as the `PRK` input,
    as follows:
 
-   a. An `info` input of the ASCII-encoded string "key"
+   {: type="a"}
+   1. An `info` input of the ASCII-encoded string "key"
       and a length (`L`) input of 16 bytes
       (corresponding to K_LEN for AEAD_AES_128_GCM);
       the output (`OKM`) is assigned to a variable `key`.
 
-   b. An `info` input of the ASCII-encoded string "nonce"
+   1. An `info` input of the ASCII-encoded string "nonce"
       and a length (`L`) input of 12 bytes
       (corresponding to `N_MIN` for AEAD_AES_128_GCM);
       the output (`OKM`) is assigned to a variable `nonce`.
@@ -547,9 +549,10 @@ To decapsulate the encrypted push message, `push_message`:
 
 9. Assign a variable, `advance` to the greater of the following two values:
 
-   a. The number of contiguous true values from the start of `dup_record`.
+   {: type="a"}
+   1. The number of contiguous true values from the start of `dup_record`.
 
-   b. The value of `offset` less half of `window`
+   1. The value of `offset` less half of `window`
       (rounded in any direction, if necessary).
 
 10. Drop the `advance` items from the start of `dup_record`,
