@@ -1277,10 +1277,6 @@ in the event of key compromise (namely, forward secrecy or FS).
 Critically, it does not protect messages that might be sent after
 any such compromise (that is, post-compromise security or PCS).<a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">This document obsoletes RFC 8291 <span>[<a href="#RFC8291" class="cite xref">RFC8291</a>]</span>.<a href="#section-1-4" class="pilcrow">¶</a></p>
-<p id="section-1-5">This document is one of a pair.
-Its companion,  is an alternative to this approach.
-<span>[<a href="#WEBPUSH-HPKE" class="cite xref">WEBPUSH-HPKE</a>]</span> describes how to encode messages
-using Hybrid Public Key Encryption (HPKE).<a href="#section-1-5" class="pilcrow">¶</a></p>
 <div id="comparison-with-predecessor">
 <section id="section-1.1">
         <h3 id="name-comparison-with-predecessor">
@@ -1579,7 +1575,7 @@ in three parts:<a href="#section-2.3-1" class="pilcrow">¶</a></p>
 where the user agent provides the information
 necessary to construct a message it will accept.
 This is provided by the user agent to the application
-during the establishment of a Web Push subscription.
+during the establishment of a push subscription.
 This depends only on the format of the shared secret,
 which are provided in <a href="#config" class="auto internal xref">Section 3</a>.<a href="#section-2.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
@@ -1629,7 +1625,7 @@ Shared Secret {
         <dt id="section-3-5.1">Key Identifier:</dt>
         <dd style="margin-left: 1.5em" id="section-3-5.2">
           <p id="section-3-5.2.1">An 8 bit value that will be used in protected messages
-to identify the shared state at the user agent's.<a href="#section-3-5.2.1" class="pilcrow">¶</a></p>
+to identify the shared state at the user agent.<a href="#section-3-5.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-3-5.3">Sequence Number:</dt>
@@ -1800,7 +1796,7 @@ Producing fresh encryption of the message plaintext for each retry avoids this r
       <h2 id="name-push-message-receiver-proce">
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-push-message-receiver-proce" class="section-name selfRef">Push Message Receiver Processing</a>
       </h2>
-<p id="section-6-1">An user agent decrypts a push message by reversing the encryption process.
+<p id="section-6-1">A user agent decrypts a push message by reversing the encryption process.
 However, a user agent needs additional processing
 to deal with the potential for gaps in the sequence of messages it receives.<a href="#section-6-1" class="pilcrow">¶</a></p>
 <p id="section-6-2">A user agent decrypts messages from multiple applications servers.
@@ -1929,7 +1925,7 @@ which means that old messages are discarded.)<a href="#section-6.3-5.3.1" class=
           <li id="section-6.3-5.4">
             <p id="section-6.3-5.4.1">If <code>dup_record</code> at an offset of <code>offset</code> is true,
 the user agent destroys the state associated with
-this application server and key identifier,
+this push subscription and key identifier,
 purging them from any store the user agent maintains,
 and then discards the message and aborts.<a href="#section-6.3-5.4.1" class="pilcrow">¶</a></p>
 </li>
@@ -2073,7 +2069,7 @@ Push messages can arrive in batches,
 so running those steps at the end of handling a batch
 rather than after every decryption
 could be more efficient.<a href="#section-6.4-4" class="pilcrow">¶</a></p>
-<p id="section-6.4-5">Concurrent decryption for the same application server and key identifier
+<p id="section-6.4-5">Concurrent decryption for the same push subscription and key identifier
 cannot occur between steps 4 and 8 of the above algorithm, inclusive.
 Otherwise, concurrency might cause duplicate push messages to be accepted.<a href="#section-6.4-5" class="pilcrow">¶</a></p>
 <p id="section-6.4-6">Alternative algorithms are also possible.
@@ -2218,7 +2214,7 @@ the secrets for half of the configured window are retained.
 to supplement this safeguard.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
 <p id="section-9.2-4">The best way to manage these risks is more frequent key rotation.
 Whether it is possible to reliably rotate keys
-will determine whether this design is feasiable
+will determine whether this design is feasable
 relative to one that uses a PQ KEM, like <span>[<a href="#WEBPUSH-HPKE" class="cite xref">WEBPUSH-HPKE</a>]</span>.
 See <a href="#rekey" class="auto internal xref">Section 7</a> for details.<a href="#section-9.2-4" class="pilcrow">¶</a></p>
 </section>
@@ -2238,7 +2234,7 @@ it <span class="bcp14">MUST</span> discard the corresponding state
 for that application server and key identifier.
 This adds a requirement on the protocols used to deliver push messages
 such that they provide duplicate detection and removal.<a href="#section-9.3-2" class="pilcrow">¶</a></p>
-<p id="section-9.3-3">The probably that two messages use the same key and nonce
+<p id="section-9.3-3">The probability that two messages use the same key and nonce
 is negligible.
 The two values are 224 bits when combined,
 which produce a collision with at most 2<sup>n-112</sup> probability
@@ -2279,7 +2275,7 @@ by activating the device radio
 or by creating messages that cannot be decrypted.<a href="#section-9.5-1" class="pilcrow">¶</a></p>
 <p id="section-9.5-2">This design also creates additional load from push messages
 with sequence numbers that are large
-relative to the window that the window that the user agent will accept.
+relative to the window that the user agent will accept.
 Such messages do not need to be decryptable to cause the user agent to waste effort.
 A user agent can track any abnormal effort induced from each application
 and act to protect itself.<a href="#section-9.5-2" class="pilcrow">¶</a></p>
