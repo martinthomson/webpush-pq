@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2026-09-20T03:41:54.979040+00:00",
+  "timestamp": "2026-09-22T03:35:46.805821+00:00",
   "repo": "martinthomson/webpush-pq",
   "labels": [
     {
@@ -87,6 +87,22 @@
           "updatedAt": "2026-09-16T01:20:29Z"
         }
       ]
+    },
+    {
+      "number": 2,
+      "id": "I_kwDOTbSVtc8AAAABSTeTRQ",
+      "title": "Integrate the declarative push message option",
+      "url": "https://github.com/martinthomson/webpush-pq/issues/2",
+      "state": "OPEN",
+      "author": "martinthomson",
+      "authorAssociation": "OWNER",
+      "assignees": [],
+      "labels": [],
+      "body": "When Apple added declarative messages to the API, it was hacked in.  Basically, the receiver parses out JSON and - if it works and a specific key is present with a specific value - that's a declarative message.  The declarative message triggers special behavior.\n\nWe can do better.  Once the message is decrypted, we can reserve a byte to signal which of the two options applies: direct pass through or declarative.  And, given that we'd be spending a byte, that creates an opportunity to re-add padding for traffic analysis protection.  The TLS padding design is probably sufficient fine for that purpose.",
+      "createdAt": "2026-09-21T06:03:20Z",
+      "updatedAt": "2026-09-21T06:03:20Z",
+      "closedAt": null,
+      "comments": []
     }
   ],
   "pulls": []
