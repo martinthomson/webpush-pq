@@ -98,11 +98,6 @@ any such compromise (that is, post-compromise security or PCS).
 
 This document obsoletes RFC 8291 {{?RFC8291}}.
 
-This document is one of a pair.
-Its companion,  is an alternative to this approach.
-{{WEBPUSH-HPKE}} describes how to encode messages
-using Hybrid Public Key Encryption (HPKE).
-
 
 ## Comparison with Predecessor
 
@@ -272,7 +267,7 @@ in three parts:
    where the user agent provides the information
    necessary to construct a message it will accept.
    This is provided by the user agent to the application
-   during the establishment of a Web Push subscription.
+   during the establishment of a push subscription.
    This depends only on the format of the shared secret,
    which are provided in {{config}}.
 
@@ -309,7 +304,7 @@ This comprises the following items:
 Key Identifier:
 
 : An 8 bit value that will be used in protected messages
-  to identify the shared state at the user agent's.
+  to identify the shared state at the user agent.
 
 Sequence Number:
 
@@ -445,7 +440,7 @@ Producing fresh encryption of the message plaintext for each retry avoids this r
 
 # Push Message Receiver Processing {#decrypt}
 
-An user agent decrypts a push message by reversing the encryption process.
+A user agent decrypts a push message by reversing the encryption process.
 However, a user agent needs additional processing
 to deal with the potential for gaps in the sequence of messages it receives.
 
@@ -576,7 +571,7 @@ To decapsulate the encrypted push message, `push_message`:
 
 4. If `dup_record` at an offset of `offset` is true,
    the user agent destroys the state associated with
-   this application server and key identifier,
+   this push subscription and key identifier,
    purging them from any store the user agent maintains,
    and then discards the message and aborts.
 
@@ -700,7 +695,7 @@ so running those steps at the end of handling a batch
 rather than after every decryption
 could be more efficient.
 
-Concurrent decryption for the same application server and key identifier
+Concurrent decryption for the same push subscription and key identifier
 cannot occur between steps 4 and 8 of the above algorithm, inclusive.
 Otherwise, concurrency might cause duplicate push messages to be accepted.
 
@@ -843,7 +838,7 @@ to supplement this safeguard.
 
 The best way to manage these risks is more frequent key rotation.
 Whether it is possible to reliably rotate keys
-will determine whether this design is feasiable
+will determine whether this design is feasable
 relative to one that uses a PQ KEM, like {{WEBPUSH-HPKE}}.
 See {{rekey}} for details.
 
@@ -862,7 +857,7 @@ for that application server and key identifier.
 This adds a requirement on the protocols used to deliver push messages
 such that they provide duplicate detection and removal.
 
-The probably that two messages use the same key and nonce
+The probability that two messages use the same key and nonce
 is negligible.
 The two values are 224 bits when combined,
 which produce a collision with at most 2<sup>n-112</sup> probability
@@ -900,7 +895,7 @@ or by creating messages that cannot be decrypted.
 
 This design also creates additional load from push messages
 with sequence numbers that are large
-relative to the window that the window that the user agent will accept.
+relative to the window that the user agent will accept.
 Such messages do not need to be decryptable to cause the user agent to waste effort.
 A user agent can track any abnormal effort induced from each application
 and act to protect itself.
