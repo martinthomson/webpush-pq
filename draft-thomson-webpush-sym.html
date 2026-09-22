@@ -1215,7 +1215,7 @@ with Web Push.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-traffic-analysis" class="internal xref">Traffic Analysis</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
-                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-key-compromise-security" class="internal xref">Key Compromise Security</a></p>
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-secret-compromise" class="internal xref">Secret Compromise</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3">
                 <p id="section-toc.1-1.9.2.3.1"><a href="#section-9.3" class="auto internal xref">9.3</a>.  <a href="#name-key-and-nonce-collisions" class="internal xref">Key and Nonce Collisions</a></p>
@@ -1305,23 +1305,27 @@ which are exchanged over a medium that is highly constrained.<a href="#section-1
 <p id="section-1.1-5">Though push messaging is highly sensitive to added bytes,
 it is less needful of protection than other protocols
 as it uses TLS to protect every communication step.
-Push message encryption provides an additional layer of end-to-end protection.<a href="#section-1.1-5" class="pilcrow">¶</a></p>
+Push message encryption provides an essential layer of end-to-end protection
+to address confidentiality and integrity with respect to the push service.<a href="#section-1.1-5" class="pilcrow">¶</a></p>
 <p id="section-1.1-6">Using purely symmetric encryption creates new vulnerabilities over RFC 8291.
 An RFC 8291 application server did not hold secrets;
 every message they created was encrypted with an ephemeral key.
-This symmetric design means that a compromise of an application server
-will result in both:<a href="#section-1.1-6" class="pilcrow">¶</a></p>
+A design based on symmetric cryptography only
+means that compromising the shared secret
+will result in a malicious push service:<a href="#section-1.1-6" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-1.1-7.1">
-            <p id="section-1.1-7.1.1">any message sent by the application server being readable to an attacker<a href="#section-1.1-7.1.1" class="pilcrow">¶</a></p>
+            <p id="section-1.1-7.1.1">being able to read any message sent by the application server<a href="#section-1.1-7.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.1-7.2">
-            <p id="section-1.1-7.2.1">the attacker being able to forge messages that the user agent will accept
-as being from the compromised application server<a href="#section-1.1-7.2.1" class="pilcrow">¶</a></p>
+            <p id="section-1.1-7.2.1">being able to modify those messages<a href="#section-1.1-7.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-1.1-7.3">
+            <p id="section-1.1-7.3.1">being able to forge messages that the user agent will accept<a href="#section-1.1-7.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-1.1-8">This risk can be managed by requesting fresh secrets from the user agent
-more often.<a href="#section-1.1-8" class="pilcrow">¶</a></p>
+more often; see <a href="#rekey" class="auto internal xref">Section 7</a>.<a href="#section-1.1-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conventions-and-definitions">
@@ -1537,6 +1541,10 @@ and the old secret destroyed.<a href="#section-2.1-5" class="pilcrow">¶</a></p>
 <a href="#name-message-encryption-ratchet" class="selfRef">Message Encryption Ratchet</a>
           </figcaption></figure>
 </div>
+<p id="section-2.1-8">This scheme includes an empty associated data input
+to the AEAD.
+Though it might be possible to include the key identifier and sequence number,
+the iterated key derivation ensures that this is not necessary.<a href="#section-2.1-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="crypto">
@@ -1552,7 +1560,8 @@ as defined in <span><a href="https://rfc-editor.org/rfc/rfc5116#section-5.1" cla
 <p id="section-2.2-3">Cryptographic agility is addressed by defining a replacement scheme;
 see <a href="#upgrade" class="auto internal xref">Section 8</a>.
 Any replacement push message encryption scheme
-defines new parameters in the Web API <span>[<a href="#PUSH-API" class="cite xref">PUSH-API</a>]</span>.
+requires that the Push API <span>[<a href="#PUSH-API" class="cite xref">PUSH-API</a>]</span>
+also be updated to include new parameters for that scheme.
 This is the same process that allows this scheme to be deployed
 as a replacement for the scheme in RFC 8291.<a href="#section-2.2-3" class="pilcrow">¶</a></p>
 </section>
@@ -1634,6 +1643,17 @@ to identify the shared state at the user agent's.<a href="#section-3-5.2.1" clas
 </dd>
       <dd class="break"></dd>
 </dl>
+<p id="section-3-6">All three of these values can be allocated randomly
+by a user agent,
+with the only condition being that the key identifier
+not match a value that has been provided to the same application.
+User agents can recycle a key identifier,
+but only if that key identifier has not been advertised or used
+for a significant period.
+This period needs to be at least as long as the retention time for old keys,
+otherwise there could be confusion
+about which secret the identifier refers to;
+see <a href="#rekey" class="auto internal xref">Section 7</a>.<a href="#section-3-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="message">
@@ -1745,6 +1765,34 @@ seq = (seq + 1) &amp; 0xff_ffff
 <a href="#name-encryption-pseudocode" class="selfRef">Encryption pseudocode</a>
         </figcaption></figure>
 </div>
+<p id="section-5-7">Successful use of this scheme requires that an application server
+not generate two messages with the same sequence number; see <a href="#collision" class="auto internal xref">Section 9.3</a>.
+Concurrent access to the state that an application server holds,
+something that is more likely in a distributed system,
+could increase the risk of this sort of collision occurring.
+Application server implementations are responsible
+for ensuring that each sequence number is used just once.<a href="#section-5-7" class="pilcrow">¶</a></p>
+<aside id="section-5-8">
+        <p id="section-5-8.1">Distributed system design is not the responsibility of this document,
+but a number of options exist
+for ensuring that sequence numbers are not reused.
+This includes the use of distributed leader election or consensus protocols
+that can reliably allocate responsibility to a single node,
+which can then use standard concurrent programming techniques (such as a mutex).
+Other designs that trade off availability for simplicity or performance
+are also potentially viable.<a href="#section-5-8.1" class="pilcrow">¶</a></p>
+</aside>
+<p id="section-5-9">In order to avoid triggering duplicate message handling,
+an application server <span class="bcp14">MUST</span> use a fresh encryption
+for every attempt it makes to send messages,
+including retries.
+For instance, if the process in <span><a href="https://rfc-editor.org/rfc/rfc8030#section-5" class="relref">Section 5</a> of [<a href="#WEBPUSH" class="cite xref">WEBPUSH</a>]</span>
+does not produce an HTTP response,
+there is a chance that the push message was accepted.
+Retrying the request with the same push message ciphertext
+risks the same sequence number arriving at the user agent,
+which could treat that as an attack; see <a href="#ua-dup" class="auto internal xref">Section 6.2</a>.
+Producing fresh encryption of the message plaintext for each retry avoids this risk.<a href="#section-5-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="decrypt">
@@ -1752,12 +1800,12 @@ seq = (seq + 1) &amp; 0xff_ffff
       <h2 id="name-push-message-receiver-proce">
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-push-message-receiver-proce" class="section-name selfRef">Push Message Receiver Processing</a>
       </h2>
-<p id="section-6-1">An user agent decrypts a push message by reversing this process.
+<p id="section-6-1">An user agent decrypts a push message by reversing the encryption process.
 However, a user agent needs additional processing
 to deal with the potential for gaps in the sequence of messages it receives.<a href="#section-6-1" class="pilcrow">¶</a></p>
 <p id="section-6-2">A user agent decrypts messages from multiple applications servers.
 To that end, it needs to store multiple secrets,
-which are indexed by application server identity and key identifier.
+which are indexed by push subscription and key identifier.
 This is described in <a href="#ua-state" class="auto internal xref">Section 6.1</a>.<a href="#section-6-2" class="pilcrow">¶</a></p>
 <p id="section-6-3">Importantly user agents need to deal with messages that arrive out of order
 relative to when they were sent
@@ -1770,20 +1818,20 @@ or by retaining an older secret and computing secrets as needed.<a href="#sectio
 a user agent therefore needs to track which messages it has already received.
 This is covered in more detail in <a href="#ua-dup" class="auto internal xref">Section 6.2</a>.<a href="#section-6-4" class="pilcrow">¶</a></p>
 <p id="section-6-5">The algorithm in <a href="#decrypt-algo" class="auto internal xref">Section 6.3</a> is an example of a possible decryption routine.
-Implementations are free to use other implementations
+Implementations are free to use other methods
 provided that they reject duplicate messages
-and can accept some number of messages out of order.<a href="#section-6-5" class="pilcrow">¶</a></p>
+and can tolerate gaps and reordering.<a href="#section-6-5" class="pilcrow">¶</a></p>
 <div id="ua-state">
 <section id="section-6.1">
         <h3 id="name-user-agent-state">
 <a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-user-agent-state" class="section-name selfRef">User Agent State</a>
         </h3>
 <p id="section-6.1-1">The protocol the user agent shares with the push service
-identifies the application server that any given message is from
-(carried in the <code>app_server</code> variable).
+identifies the push subscription that the push message is being delivered to
+(carried in the <code>subscription</code> variable).
 The key identifier, <code>key_id</code>, is carried in the message.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
 <p id="section-6.1-2">The user agent can recover the necessary state
-from the application server identity and key identifier:
+from the push subscription and key identifier:
 the shared secret, <code>secret</code>,
 the sequence number, <code>seq</code>,
 and the duplicate message record, <code>dup_record</code>.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
@@ -1817,12 +1865,24 @@ it can be limited to a finite window.
 Any message with a sequence number outside of that window
 <span class="bcp14">MUST</span> be discarded without attempting to decrypt it.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
 <p id="section-6.2-4">To avoid false positives on duplicate detection
-the push service needs to ensure that it cannot deliver the same message
-more than once.
-Any duplicate message that arrives is then the result of an application server bug
+the protocol used by the user agent to interact with the push service
+<span class="bcp14">MUST</span> ensure that the user agent does not attempt to process duplicate messages.
+The most reliable way of meeting this requirement
+is to ensure that duplicate push messages are detected and dropped
+before decryption;
+delivering messages at most once creates a high risk of message loss.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<p id="section-6.2-5">Any duplicate message that arrives is then the result of an application server bug
 or an attack (such as a compromise of the secret).
 The push service <span class="bcp14">MUST NOT</span> parse and validate the sequence number
-from messages to remove duplicates as this could hide bugs and attacks.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+from messages to remove duplicates as this could hide bugs and attacks.<a href="#section-6.2-5" class="pilcrow">¶</a></p>
+<aside id="section-6.2-6">
+          <p id="section-6.2-6.1">Note: <span><a href="https://rfc-editor.org/rfc/rfc8030#section-6.2" class="relref">Section 6.2</a> of [<a href="#WEBPUSH" class="cite xref">WEBPUSH</a>]</span> describes a protocol
+that might deliver a message multiple times.
+This is sufficient to meet this requirement
+because each message carries a unique identifier.
+This identifier enables the dropping of any duplicates
+before attempting decryption.<a href="#section-6.2-6.1" class="pilcrow">¶</a></p>
+</aside>
 </section>
 </div>
 <div id="decrypt-algo">
@@ -1851,7 +1911,7 @@ into <code>key_id</code>, <code>mseq</code>, and <code>ct</code>
 (indicated using the function <code>parse()</code> in pseudocode below).<a href="#section-6.3-5.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-6.3-5.2">
-            <p id="section-6.3-5.2.1">The user agent is then able to use <code>key_id</code> and <code>app_server</code> to find
+            <p id="section-6.3-5.2.1">The user agent is then able to use <code>key_id</code> and <code>subscription</code> to find
 the corresponding secret, <code>secret</code>, sequence number, <code>seq</code>,
 and duplicate message record, <code>dup_record</code>
 (indicated with the function <code>lookup()</code> in the pseudocode below).
@@ -1945,12 +2005,12 @@ but with <code>secret</code> in place of <code>msecret</code>.<a href="#section-
 <pre>
 # Parse and validate
 key_id, mseq, ct = parse(enc_request)
-secret, seq, dup_record = lookup(app_server, key_id)
+secret, seq, dup_record = lookup(subscription, key_id)
 if not secret: abort
 offset = (mseq + 0x100_0000 - seq) &amp; 0xff_ffff
 if offset &gt;= window: abort
 if dup_record[offset] == true:
-  destroy_state(app_server, key_id)
+  destroy_state(subscription, key_id)
   abort
 
 # Get secret
@@ -2066,16 +2126,15 @@ which can reduce the amount of state they need to retain.<a href="#section-7-5" 
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-upgrading-from-rfc-8291" class="section-name selfRef">Upgrading from RFC 8291</a>
       </h2>
 <p id="section-8-1">The encryption scheme in <span>[<a href="#RFC8291" class="cite xref">RFC8291</a>]</span> identifies itself
-through the use of the encrypted "aes128gcm" content coding <span>[<a href="#RFC8188" class="cite xref">RFC8188</a>]</span>.
-An application <span class="bcp14">MUST NOT</span> use this message encryption scheme
-and the "aes128gcm" content coding at the same time,
-even though that is theoretically possible.<a href="#section-8-1" class="pilcrow">¶</a></p>
-<p id="section-8-2">A user agent can therefore use the absence of the encrypted content coding
-to indicate the use of this scheme.<a href="#section-8-2" class="pilcrow">¶</a></p>
-<p id="section-8-3">This document defines a media type
+through the use of the encrypted "aes128gcm" content coding <span>[<a href="#RFC8188" class="cite xref">RFC8188</a>]</span>.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">In place of content coding, this document defines a media type
 for push messages protected with this scheme; see <a href="#iana" class="auto internal xref">Section 10</a>.
-This allows this message type to be positively identified
-and to distinguish this encryption scheme from any future scheme.<a href="#section-8-3" class="pilcrow">¶</a></p>
+This allows this form of message protection to be positively identified
+and to distinguish this encryption scheme from any future scheme.<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-8-3">An application <span class="bcp14">MUST NOT</span> use this message encryption scheme
+and the "aes128gcm" content coding at the same time,
+even though that is possible.
+A user agent <span class="bcp14">MAY</span> discard messages that contain both schemes.<a href="#section-8-3" class="pilcrow">¶</a></p>
 <p id="section-8-4"><span><a href="https://rfc-editor.org/rfc/rfc8291#section-4" class="relref">Section 4</a> of [<a href="#RFC8291" class="cite xref">RFC8291</a>]</span> recommends that push services support ciphertext
 of 4096 bytes.
 This capacity includes cryptographic overheads,
@@ -2119,29 +2178,36 @@ Any replacement of this encryption scheme can use those same techniques.<a href=
         </h3>
 <p id="section-9.1-1">Like the design in RFC 8291 (see <span><a href="https://rfc-editor.org/rfc/rfc8291#section-7" class="relref">Section 7</a> of [<a href="#RFC8291" class="cite xref">RFC8291</a>]</span>),
 this mechanism cannot obscure the presence, timing, and size of messages
-from the push service.
-Though communication with the push service is protected by TLS,
+from the push service.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<p id="section-9.1-2">Though communication with the push service is protected by TLS,
 without additional traffic analysis protection,
-network observers might also be able to observe these attributes of messages.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
-<p id="section-9.1-2">Padding of the payload of messages can be used
+network observers might also be able to observe these attributes of messages.<a href="#section-9.1-2" class="pilcrow">¶</a></p>
+<p id="section-9.1-3">Padding of the payload of messages can be used
 to obscure the precise size of the message,
 but no facility is provided in this document for padding messages.
 This differs from the RFC 8291 design,
-which was able to use the padding provided by the <span>[<a href="#RFC8188" class="cite xref">RFC8188</a>]</span> encoding.<a href="#section-9.1-2" class="pilcrow">¶</a></p>
+which was able to use the padding provided by the <span>[<a href="#RFC8188" class="cite xref">RFC8188</a>]</span> encoding.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="compromise">
 <section id="section-9.2">
-        <h3 id="name-key-compromise-security">
-<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-key-compromise-security" class="section-name selfRef">Key Compromise Security</a>
+        <h3 id="name-secret-compromise">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-secret-compromise" class="section-name selfRef">Secret Compromise</a>
         </h3>
 <p id="section-9.2-1">This message encryption scheme does not provide confidentiality
 of messages that are sent after a key becomes compromised.
-A key compromise leads to loss of confidentiality
-for all messages sent under the same key,
-in the past or future.
-Knowledge of the key also grants the ability to forge arbitrary new messages.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
-<p id="section-9.2-2">Forward secrecy is provided with respect to compromise of application servers,
+A compromise of a secret leads to loss of confidentiality
+for all messages sent under that secret or any subsequent secret.
+Knowledge of the secret also grants the ability to forge arbitrary new messages.<a href="#section-9.2-1" class="pilcrow">¶</a></p>
+<p id="section-9.2-2">Destroying secrets in the event of a collision (<a href="#collision" class="auto internal xref">Section 9.3</a>)
+is only a partial mitigation against compromise.
+A successful forgery requires that an attacker ensure that its forged messages
+do not use the same sequence numbers as genuine messages
+that reach the user agent.
+If the attacker sends first, the forged message is still received.
+Destroying secrets has no effect on attacks
+that modify or inspect messages.<a href="#section-9.2-2" class="pilcrow">¶</a></p>
+<p id="section-9.2-3">Forward secrecy is provided with respect to compromise of application servers,
 but the need to handle gaps and reordering at a user agent
 means that there is only limited forward secrecy.
 The simple algorithm in <a href="#decrypt-algo" class="auto internal xref">Section 6.3</a> provides forward secrecy
@@ -2149,12 +2215,12 @@ when messages arrive in order.
 However, when there is a gap in the arriving sequence of messages,
 the secrets for half of the configured window are retained.
 <a href="#decrypt-notes" class="auto internal xref">Section 6.4</a> describes how user agent implementation could use a timer
-to supplement this safeguard.<a href="#section-9.2-2" class="pilcrow">¶</a></p>
-<p id="section-9.2-3">The best way to manage these risks is more frequent key rotation.
+to supplement this safeguard.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
+<p id="section-9.2-4">The best way to manage these risks is more frequent key rotation.
 Whether it is possible to reliably rotate keys
 will determine whether this design is feasiable
 relative to one that uses a PQ KEM, like <span>[<a href="#WEBPUSH-HPKE" class="cite xref">WEBPUSH-HPKE</a>]</span>.
-See <a href="#rekey" class="auto internal xref">Section 7</a> for details.<a href="#section-9.2-3" class="pilcrow">¶</a></p>
+See <a href="#rekey" class="auto internal xref">Section 7</a> for details.<a href="#section-9.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="collision">
