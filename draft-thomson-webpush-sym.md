@@ -129,21 +129,24 @@ which are exchanged over a medium that is highly constrained.
 Though push messaging is highly sensitive to added bytes,
 it is less needful of protection than other protocols
 as it uses TLS to protect every communication step.
-Push message encryption provides an additional layer of end-to-end protection.
+Push message encryption provides an essential layer of end-to-end protection
+to address confidentiality and integrity with respect to the push service.
 
 Using purely symmetric encryption creates new vulnerabilities over RFC 8291.
 An RFC 8291 application server did not hold secrets;
 every message they created was encrypted with an ephemeral key.
-This symmetric design means that a compromise of an application server
-will result in both:
+A design based on symmetric cryptography only
+means that compromising the shared secret
+will result in a malicious push service:
 
-* any message sent by the application server being readable to an attacker
+* being able to read any message sent by the application server
 
-* the attacker being able to forge messages that the user agent will accept
-  as being from the compromised application server
+* being able to modify those messages
+
+* being able to forge messages that the user agent will accept
 
 This risk can be managed by requesting fresh secrets from the user agent
-more often.
+more often; see {{rekey}}.
 
 
 
@@ -236,6 +239,11 @@ This process is illustrated in {{f-ratchet}}.
 ~~~
 {: #f-ratchet title="Message Encryption Ratchet"}
 
+This scheme includes an empty associated data input
+to the AEAD.
+Though it might be possible to include the key identifier and sequence number,
+the iterated key derivation ensures that this is not necessary.
+
 
 ## Cryptographic Primitives and Agility {#crypto}
 
@@ -249,7 +257,8 @@ as defined in {{Section 5.1 of !AEAD=RFC5116}}.
 Cryptographic agility is addressed by defining a replacement scheme;
 see {{upgrade}}.
 Any replacement push message encryption scheme
-defines new parameters in the Web API {{PUSH-API}}.
+requires that the Push API {{PUSH-API}}
+also be updated to include new parameters for that scheme.
 This is the same process that allows this scheme to be deployed
 as a replacement for the scheme in RFC 8291.
 
@@ -309,6 +318,18 @@ Sequence Number:
 Secret:
 
 : A 256 bit shared secret.
+
+All three of these values can be allocated randomly
+by a user agent,
+with the only condition being that the key identifier
+not match a value that has been provided to the same application.
+User agents can recycle a key identifier,
+but only if that key identifier has not been advertised or used
+for a significant period.
+This period needs to be at least as long as the retention time for old keys,
+otherwise there could be confusion
+about which secret the identifier refers to;
+see {{rekey}}.
 
 
 # Encrypted Push Message Format {#message}
@@ -391,16 +412,46 @@ seq = (seq + 1) & 0xff_ffff
 ~~~
 {: #f-encrypt title="Encryption pseudocode"}
 
+Successful use of this scheme requires that an application server
+not generate two messages with the same sequence number; see {{collision}}.
+Concurrent access to the state that an application server holds,
+something that is more likely in a distributed system,
+could increase the risk of this sort of collision occurring.
+Application server implementations are responsible
+for ensuring that each sequence number is used just once.
+
+{:aside}
+> Distributed system design is not the responsibility of this document,
+> but a number of options exist
+> for ensuring that sequence numbers are not reused.
+> This includes the use of distributed leader election or consensus protocols
+> that can reliably allocate responsibility to a single node,
+> which can then use standard concurrent programming techniques (such as a mutex).
+> Other designs that trade off availability for simplicity or performance
+> are also potentially viable.
+
+In order to avoid triggering duplicate message handling,
+an application server MUST use a fresh encryption
+for every attempt it makes to send messages,
+including retries.
+For instance, if the process in {{Section 5 of WEBPUSH}}
+does not produce an HTTP response,
+there is a chance that the push message was accepted.
+Retrying the request with the same push message ciphertext
+risks the same sequence number arriving at the user agent,
+which could treat that as an attack; see {{ua-dup}}.
+Producing fresh encryption of the message plaintext for each retry avoids this risk.
+
 
 # Push Message Receiver Processing {#decrypt}
 
-An user agent decrypts a push message by reversing this process.
+An user agent decrypts a push message by reversing the encryption process.
 However, a user agent needs additional processing
 to deal with the potential for gaps in the sequence of messages it receives.
 
 A user agent decrypts messages from multiple applications servers.
 To that end, it needs to store multiple secrets,
-which are indexed by application server identity and key identifier.
+which are indexed by push subscription and key identifier.
 This is described in {{ua-state}}.
 
 Importantly user agents need to deal with messages that arrive out of order
@@ -416,20 +467,20 @@ a user agent therefore needs to track which messages it has already received.
 This is covered in more detail in {{ua-dup}}.
 
 The algorithm in {{decrypt-algo}} is an example of a possible decryption routine.
-Implementations are free to use other implementations
+Implementations are free to use other methods
 provided that they reject duplicate messages
-and can accept some number of messages out of order.
+and can tolerate gaps and reordering.
 
 
 ## User Agent State {#ua-state}
 
 The protocol the user agent shares with the push service
-identifies the application server that any given message is from
-(carried in the `app_server` variable).
+identifies the push subscription that the push message is being delivered to
+(carried in the `subscription` variable).
 The key identifier, `key_id`, is carried in the message.
 
 The user agent can recover the necessary state
-from the application server identity and key identifier:
+from the push subscription and key identifier:
 the shared secret, `secret`,
 the sequence number, `seq`,
 and the duplicate message record, `dup_record`.
@@ -464,12 +515,25 @@ Any message with a sequence number outside of that window
 MUST be discarded without attempting to decrypt it.
 
 To avoid false positives on duplicate detection
-the push service needs to ensure that it cannot deliver the same message
-more than once.
+the protocol used by the user agent to interact with the push service
+MUST ensure that the user agent does not attempt to process duplicate messages.
+The most reliable way of meeting this requirement
+is to ensure that duplicate push messages are detected and dropped
+before decryption;
+delivering messages at most once creates a high risk of message loss.
+
 Any duplicate message that arrives is then the result of an application server bug
 or an attack (such as a compromise of the secret).
 The push service MUST NOT parse and validate the sequence number
 from messages to remove duplicates as this could hide bugs and attacks.
+
+{:aside}
+> Note: {{Section 6.2 of ?WEBPUSH}} describes a protocol
+> that might deliver a message multiple times.
+> This is sufficient to meet this requirement
+> because each message carries a unique identifier.
+> This identifier enables the dropping of any duplicates
+> before attempting decryption.
 
 
 ## Simple Decryption Algorithm {#decrypt-algo}
@@ -496,7 +560,7 @@ To decapsulate the encrypted push message, `push_message`:
    into `key_id`, `mseq`, and `ct`
    (indicated using the function `parse()` in pseudocode below).
 
-2. The user agent is then able to use `key_id` and `app_server` to find
+2. The user agent is then able to use `key_id` and `subscription` to find
    the corresponding secret, `secret`, sequence number, `seq`,
    and duplicate message record, `dup_record`
    (indicated with the function `lookup()` in the pseudocode below).
@@ -570,12 +634,12 @@ A pseudocode version of this procedure is shown in {{f-decrypt}}.
 ~~~ pseudocode
 # Parse and validate
 key_id, mseq, ct = parse(enc_request)
-secret, seq, dup_record = lookup(app_server, key_id)
+secret, seq, dup_record = lookup(subscription, key_id)
 if not secret: abort
 offset = (mseq + 0x100_0000 - seq) & 0xff_ffff
 if offset >= window: abort
 if dup_record[offset] == true:
-  destroy_state(app_server, key_id)
+  destroy_state(subscription, key_id)
   abort
 
 # Get secret
@@ -688,17 +752,16 @@ which can reduce the amount of state they need to retain.
 
 The encryption scheme in {{?RFC8291}} identifies itself
 through the use of the encrypted "aes128gcm" content coding {{!RFC8188}}.
+
+In place of content coding, this document defines a media type
+for push messages protected with this scheme; see {{iana}}.
+This allows this form of message protection to be positively identified
+and to distinguish this encryption scheme from any future scheme.
+
 An application MUST NOT use this message encryption scheme
 and the "aes128gcm" content coding at the same time,
-even though that is theoretically possible.
-
-A user agent can therefore use the absence of the encrypted content coding
-to indicate the use of this scheme.
-
-This document defines a media type
-for push messages protected with this scheme; see {{iana}}.
-This allows this message type to be positively identified
-and to distinguish this encryption scheme from any future scheme.
+even though that is possible.
+A user agent MAY discard messages that contain both schemes.
 
 {{Section 4 of RFC8291}} recommends that push services support ciphertext
 of 4096 bytes.
@@ -739,6 +802,7 @@ Any replacement of this encryption scheme can use those same techniques.
 Like the design in RFC 8291 (see {{Section 7 of ?RFC8291}}),
 this mechanism cannot obscure the presence, timing, and size of messages
 from the push service.
+
 Though communication with the push service is protected by TLS,
 without additional traffic analysis protection,
 network observers might also be able to observe these attributes of messages.
@@ -750,14 +814,22 @@ This differs from the RFC 8291 design,
 which was able to use the padding provided by the {{?RFC8188}} encoding.
 
 
-## Key Compromise Security {#compromise}
+## Secret Compromise {#compromise}
 
 This message encryption scheme does not provide confidentiality
 of messages that are sent after a key becomes compromised.
-A key compromise leads to loss of confidentiality
-for all messages sent under the same key,
-in the past or future.
-Knowledge of the key also grants the ability to forge arbitrary new messages.
+A compromise of a secret leads to loss of confidentiality
+for all messages sent under that secret or any subsequent secret.
+Knowledge of the secret also grants the ability to forge arbitrary new messages.
+
+Destroying secrets in the event of a collision ({{collision}})
+is only a partial mitigation against compromise.
+A successful forgery requires that an attacker ensure that its forged messages
+do not use the same sequence numbers as genuine messages
+that reach the user agent.
+If the attacker sends first, the forged message is still received.
+Destroying secrets has no effect on attacks
+that modify or inspect messages.
 
 Forward secrecy is provided with respect to compromise of application servers,
 but the need to handle gaps and reordering at a user agent
