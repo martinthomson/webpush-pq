@@ -4,9 +4,9 @@
 
 Web-Based Push Notifications                                  M. Thomson
 Internet-Draft                                                   Mozilla
-Obsoletes: 8291 (if approved)                          21 September 2026
+Obsoletes: 8291 (if approved)                          22 September 2026
 Intended status: Standards Track                                        
-Expires: 25 March 2027
+Expires: 26 March 2027
 
 
                WebPush Encryption using Symmetric Ciphers
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 25 March 2027.
+   This Internet-Draft will expire on 26 March 2027.
 
 Copyright Notice
 
@@ -348,19 +348,19 @@ Table of Contents
        secret as the PRK input, as follows:
 
        a.  An info input of the ASCII-encoded ([ASCII]) string "secret"
-       (that is, six bytes with no length prefix or null termination)
-       and a length (L) input of 32 bytes; the output (OKM) is assigned
-       to a variable next_secret.
+           (that is, six bytes with no length prefix or null
+           termination) and a length (L) input of 32 bytes; the output
+           (OKM) is assigned to a variable next_secret.
 
        b.  An info input of the ASCII-encoded string "key" and a length
-       (L) input of 16 bytes (corresponding to K_LEN for
-       AEAD_AES_128_GCM); the output (OKM) is assigned to a variable
-       key.
+           (L) input of 16 bytes (corresponding to K_LEN for
+           AEAD_AES_128_GCM); the output (OKM) is assigned to a variable
+           key.
 
        c.  An info input of the ASCII-encoded string "nonce" and a
-       length (L) input of 12 bytes (corresponding to N_MIN for
-       AEAD_AES_128_GCM); the output (OKM) is assigned to a variable
-       nonce.
+           length (L) input of 12 bytes (corresponding to N_MIN for
+           AEAD_AES_128_GCM); the output (OKM) is assigned to a variable
+           nonce.
 
    2.  Invoke the encryption method (see Section 2.1 of [AEAD]) of the
        AEAD_AES_128_GCM AEAD (see Section 5.1 of [AEAD]) passing msg as
@@ -505,14 +505,14 @@ Table of Contents
         the PRK input, as follows:
 
         a.  An info input of the ASCII-encoded string "key" and a length
-        (L) input of 16 bytes (corresponding to K_LEN for
-        AEAD_AES_128_GCM); the output (OKM) is assigned to a variable
-        key.
+            (L) input of 16 bytes (corresponding to K_LEN for
+            AEAD_AES_128_GCM); the output (OKM) is assigned to a
+            variable key.
 
         b.  An info input of the ASCII-encoded string "nonce" and a
-        length (L) input of 12 bytes (corresponding to N_MIN for
-        AEAD_AES_128_GCM); the output (OKM) is assigned to a variable
-        nonce.
+            length (L) input of 12 bytes (corresponding to N_MIN for
+            AEAD_AES_128_GCM); the output (OKM) is assigned to a
+            variable nonce.
 
    7.   Invoke the decryption method (see Section 2.2 of [AEAD]) of the
         AEAD_AES_128_GCM AEAD (see Section 5.1 of [AEAD]) passing ct as
@@ -526,10 +526,10 @@ Table of Contents
         values:
 
         a.  The number of contiguous true values from the start of
-        dup_record.
+            dup_record.
 
         b.  The value of offset less half of window (rounded in any
-        direction, if necessary).
+            direction, if necessary).
 
    10.  Drop the advance items from the start of dup_record, and add
         advance false values to the end.
@@ -905,7 +905,7 @@ Table of Contents
 
    [WEBPUSH-HPKE]
               Thomson, M., "WebPush Encryption using HPKE", Work in
-              Progress, Internet-Draft, draft-thomson-webpush-hpke, 21
+              Progress, Internet-Draft, draft-thomson-webpush-hpke, 22
               September 2026, <https://datatracker.ietf.org/doc/html/
               draft-thomson-webpush-hpke>.
 
