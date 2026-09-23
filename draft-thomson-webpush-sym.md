@@ -598,7 +598,8 @@ To decapsulate the encrypted push message, `push_message`:
    1. The number of contiguous true values from the start of `dup_record`.
 
    1. The value of `offset` less half of `window`
-      (rounded in any direction, if necessary).
+      (as this choice has no significant impact on the algorithm,
+      the value can be rounded in any direction).
 
 10. Drop the `advance` items from the start of `dup_record`,
     and add `advance` false values to the end.
