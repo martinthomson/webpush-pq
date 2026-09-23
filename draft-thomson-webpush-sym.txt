@@ -4,9 +4,9 @@
 
 Web-Based Push Notifications                                  M. Thomson
 Internet-Draft                                                   Mozilla
-Obsoletes: 8291 (if approved)                          22 September 2026
+Obsoletes: 8291 (if approved)                          23 September 2026
 Intended status: Standards Track                                        
-Expires: 26 March 2027
+Expires: 27 March 2027
 
 
                WebPush Encryption using Symmetric Ciphers
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 March 2027.
+   This Internet-Draft will expire on 27 March 2027.
 
 Copyright Notice
 
@@ -894,12 +894,6 @@ Table of Contents
               DOI 10.17487/RFC5869, May 2010,
               <https://www.rfc-editor.org/rfc/rfc5869>.
 
-   [HPKE]     Barnes, R., Bhargavan, K., Lipp, B., and C. A. Wood,
-              "Hybrid Public Key Encryption", Work in Progress,
-              Internet-Draft, draft-ietf-hpke-hpke-04, 6 July 2026,
-              <https://datatracker.ietf.org/doc/html/draft-ietf-hpke-
-              hpke-04>.
-
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -931,11 +925,6 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-
               aead-limits-13>.
 
-   [CDJZ]     Cremers, C., Dax, A., Jacomme, C., and M. Zhao, "Automated
-              Analysis of Protocols that use Authenticated Encryption:
-              How Subtle AEAD Differences can impact Protocol Security",
-              USENIX 2023, August 2023.
-
    [PQC-GUIDE]
               Banerjee, A., Reddy.K, T., Schoinianakis, D., Hollebeek,
               T., and M. Ounsworth, "Post-Quantum Cryptography for
@@ -962,7 +951,7 @@ Table of Contents
 
    [WEBPUSH-HPKE]
               Thomson, M., "WebPush Encryption using HPKE", Work in
-              Progress, Internet-Draft, draft-thomson-webpush-hpke, 22
+              Progress, Internet-Draft, draft-thomson-webpush-hpke, 23
               September 2026, <https://datatracker.ietf.org/doc/html/
               draft-thomson-webpush-hpke>.
 
