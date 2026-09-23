@@ -30,7 +30,6 @@ author:
     email: "mt@lowentropy.net"
 
 normative:
-  HPKE: I-D.ietf-hpke-hpke
 
 informative:
   WEBPUSH-HPKE:
@@ -40,19 +39,6 @@ informative:
     seriesinfo:
       Internet-Draft: draft-thomson-webpush-hpke-latest
     date: draft-thomson-webpush-hpke-date
-
-  CDJZ:
-    title: >
-      Automated Analysis of Protocols that use Authenticated Encryption:
-      How Subtle AEAD Differences can impact Protocol Security
-    date: 2023-08
-    author:
-      - name: Cas Cremers
-      - name: Alexander Dax
-      - name: Charlie Jacomme
-      - name: Mang Zhao
-    seriesinfo:
-      USENIX: 2023
 
   PUSH-API:
     title: Push API
