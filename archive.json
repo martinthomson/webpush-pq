@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2026-09-22T03:35:46.805821+00:00",
+  "timestamp": "2026-09-24T03:26:07.017609+00:00",
   "repo": "martinthomson/webpush-pq",
   "labels": [
     {
@@ -100,9 +100,17 @@
       "labels": [],
       "body": "When Apple added declarative messages to the API, it was hacked in.  Basically, the receiver parses out JSON and - if it works and a specific key is present with a specific value - that's a declarative message.  The declarative message triggers special behavior.\n\nWe can do better.  Once the message is decrypted, we can reserve a byte to signal which of the two options applies: direct pass through or declarative.  And, given that we'd be spending a byte, that creates an opportunity to re-add padding for traffic analysis protection.  The TLS padding design is probably sufficient fine for that purpose.",
       "createdAt": "2026-09-21T06:03:20Z",
-      "updatedAt": "2026-09-21T06:03:20Z",
+      "updatedAt": "2026-09-22T14:45:56Z",
       "closedAt": null,
-      "comments": []
+      "comments": [
+        {
+          "author": "beidson",
+          "authorAssociation": "NONE",
+          "body": "> When Apple added declarative messages to the API, it was hacked in.\n\nWe spent time discussing what signal would flag a declarative message, and protocol-level stuff with e.g. http or tls was on the table. potential solution.\n\nWe decided against them since one of the design goals of declarative web push was automatic backwards compatibility with legacy web push, including not requiring any push provider/carrier in any part of the change having to adapt.\n\nAdmittedly we more seriously considered http which seems more likely to \"break\" with a rigidly configured provider. But some in discussion came up with at least one way that leveraging TLS seemed like it *might* require infrastructure reconfiguration, as well.\n\nSo, a more direct signal embedded at the e.g. TLS protocol sounds fine but - per a design goal - shouldn't be the *only* signal to opt-in.\nI foresee the way this would look to be:\n\n1 - The byte should distinguish between legacy web push, declarative new web push, and non-declarative new web push.\n2 - \"The byte is missing altogether\" is a fine way to signal legacy web push\n3 - For push messages that opt-in to \"non-declarative new web push\" via the byte, JSON parsing could therefore be skipped.\n4 - For a \"declarative new web push\" message JSON parsing is obviously still required to validate and use the declarative payload.\n5 - For a \"legacy web push\" message, JSON parsing will still be required to see if they opted-in to declarative via the JSON entry (see the \"backwards compatible with existing web push stacks\" requirement above)\n\nSo it follows from the above...\nIf the primary goal here is to save on JSON parsing for legacy web push messages, that goal isn't achieved; Since backwards compatibility is a stated goal of declarative web push, JSON parsing is still required there to look for the opt-in key and otherwise validate the message.\n",
+          "createdAt": "2026-09-22T14:41:30Z",
+          "updatedAt": "2026-09-22T14:45:56Z"
+        }
+      ]
     }
   ],
   "pulls": []
