@@ -197,25 +197,26 @@ and the old secret destroyed.
 This process is illustrated in {{f-ratchet}}.
 
 ~~~ aasvg
-+------------+         .-----.         +------------+
-|  secret n  +--------+ KDF s +------->| secret n+1 +--->...
-+---+---+----+         `-----'         +---+---+----+
-    |   |                                  |   |
-    |   |      .-----.                     |   |
-    |    `----+ KDF n +--------------.     |  ...
-    |          `-----'                |
-    |          .-----.                |
-     `--------+ KDF k +----------.    |
-               `-----'        key |   | nonce
-                                  v   v
-                                +-------.
-+------------+                  |        \
-| message    +----------------->|  AEAD   +--------.
-+------------+                  |        /          |
-                                +-------'           |
-                                                    v
++------------+         .-----.                +------------+
+|  secret n  +--------+ KDF s +-------------->| secret n+1 +---...
++---+---+----+         `-----'                +---+---+----+
+    |   |                                         |   |
+    |   |      .-----.                            |   |
+    |    `----+ KDF n +----------------.          |   ...
+    |          `-----'                  |
+    |          .-----.                  |
+     `--------+ KDF k +------------.    |
+               `-----'              |   |
+                                key |   | nonce
+                                    v   v
+                                  +-------.
++-----------+------+-------+      |        \
+| message.. ‖ type | pad.. +----->|  AEAD   +--------.
++-----------+------+-------+      |        /          |
+                                  +-------'           |
+                                                      v
                                +-------+--------+---------------+
-                               | keyid |   n    | ciphertext    |
+                               | keyid |   n    ‖ ciphertext    |
                                +-------+--------+---------------+
 ~~~
 {: #f-ratchet title="Message Encryption Ratchet"}
@@ -321,15 +322,90 @@ The format of push messages is illustrated in {{f-message}}.
 Encrypted Push Message {
   Key Identifier (8),
   Sequence Number (24),
-  Encrypted Message Contents (..),
+  Encrypted Message Contents (136..),
 }
 ~~~
 {: #f-message title="Encrypted Push Message Format"}
+
+Each message contains:
+
+Key Identifier:
+
+: A single byte that identifies the share secret
+  that was provided by the user agent.
+
+Sequence Number:
+
+: A three-byte or 24-bit number that increments by one
+  each time the application server encrypts a message.
+  The value can overflow safely
+  (that is, 0x000000 comes after 0xffffff).
+
+Encrypted Message Contents:
+
+: An arbitrary amount of ciphertext.
+  This will be at least 17 bytes in length,
+  to account for the authentication tag used by the chosen cipher
+  and the type field.
 
 Processes for the application server that sends messages
 are included in {{encrypt}};
 processes for the user agent that receives messages
 are included in {{decrypt}}.
+
+The content of a push message is shown in {{f-content}}.
+
+~~~ artwork
+Message Content {
+  Application Data (..),
+  Type (8) = 0x01 | 0x02,
+  Padding(..) = [0x00, ..],
+}
+~~~
+{: #f-content title="Push Message Content Format"}
+
+The plaintext input to the AEAD function comprises:
+
+Application Data:
+
+: An arbitrary amount of application data.
+
+Type:
+
+: A non-zero byte that indicates the format and purpose
+  of the Application Data field.
+  0x01 indicates raw message data.
+  0x02 indicates the declarative format defined in {{declarative}}.
+
+Padding:
+
+: An arbitrary number of zero-valued bytes.
+
+All non-zero push message types other than 0x01 and 0x02 are reserved.
+However, a user agent MUST handle any other non-zero value
+as though it were Type 0x01 (raw).
+
+
+## Declarative Push Messages {#declarative}
+
+The Push API defines a JSON-based format
+for push messages that enables automated processing
+by an operating system or user agent process;
+see [Section 3.3](https://www.w3.org/TR/push-api/#declarative-push-message)
+of {{PUSH-API}}.
+This can be a significantly more efficient way to handle push messages.
+
+A declarative push message requires special handling,
+starting with JSON parsing {{?JSON=RFC8259}}.
+Those processes are not defined in this document,
+with one exception below;
+{{PUSH-API}} describes those processes in detail.
+
+Assigning a dedicated type to push messages for this purpose
+simplifies the detection of declarative push message.
+When this encryption scheme is used with the declarative type (0x02),
+the "`web_push`" member of the declarative push message JSON object MAY be omitted.
+This can result in a reduction in message size of at least 16 bytes.
 
 
 # Push Message Encryption {#encrypt}
@@ -343,10 +419,19 @@ using values from the key configuration:
 
 * the shared secret from the configuration, `secret`,
 
+The application also optionally indicates
+whether the message is declarative ({{declarative}})
+with the boolean argument `declarative`
+and how much padding to include
+with the integer argument `padding`.
+
 The application then constructs an encrypted push message, `push_message`,
 from the plaintext of the message, `msg`, as follows:
 
-1. Invoke HKDF-Expand (see {{Section 2.3 of !HKDF=RFC5869}})
+1. Append a type byte to `msg`, either 0x01 (raw) or 0x02 (declarative),
+   plus any amount of zero-valued padding bytes to produce `plaintext`.
+
+2. Invoke HKDF-Expand (see {{Section 2.3 of !HKDF=RFC5869}})
    with SHA-256 {{!SHA}} as the underlying hash function
    three times,
    each time with `secret` as the `PRK` input,
@@ -370,7 +455,8 @@ from the plaintext of the message, `msg`, as follows:
 
 2. Invoke the encryption method (see {{Section 2.1 of AEAD}})
    of the AEAD_AES_128_GCM AEAD (see {{Section 5.1 of AEAD}})
-   passing `msg` as P, `key` as K, `nonce` as N, and an empty associated data as A,
+   passing `plaintext` as P, `key` as K, `nonce` as N,
+   and an empty associated data as A,
    yielding ciphertext `ct` as C.
 
 3. Concatenate the values of `key_id`, `seq`, and `ct`,
@@ -383,6 +469,7 @@ from the plaintext of the message, `msg`, as follows:
 A pseudocode version of this procedure is shown in {{f-encrypt}}.
 
 ~~~ pseudocode
+plaintext = concat(msg, declarative ? 0x02 : 0x01, [0] * padding)
 next_secret = hkdf.expand(secret, "secret", 32)
 key = hkdf.expand(secret, "key", 16)
 nonce = hkdf.expand(secret, "nonce", 12)
@@ -537,84 +624,106 @@ as required by {{ua-dup}}.
 
 To decapsulate the encrypted push message, `push_message`:
 
-1. Parse `push_message`
-   into `key_id`, `mseq`, and `ct`
-   (indicated using the function `parse()` in pseudocode below).
+1. Parse and validate the push message:
 
-2. The user agent is then able to use `key_id` and `subscription` to find
-   the corresponding secret, `secret`, sequence number, `seq`,
-   and duplicate message record, `dup_record`
-   (indicated with the function `lookup()` in the pseudocode below).
-   If `key_id` does not identify a secret known to the user agent,
-   the user agent discards the message and aborts.
+   {:type="a"}
+   1. Parse `push_message`
+      into `key_id`, `mseq`, and `ct`
+      (indicated using the function `parse()` in pseudocode below).
 
-3. Assign a variable `offset` to `mseq` minus `seq`, modulo 2<sup>24</sup>.
-   If `offset` is greater than or equal to `window`,
-   the user agent discards the message and aborts.
-   (Note that the modulo operation guarantees that offset will be very large
-   if `mseq` is less than `seq`,
-   which means that old messages are discarded.)
+   1. The user agent is then able to use `key_id` and `subscription` to find
+       the corresponding secret, `secret`, sequence number, `seq`,
+       and duplicate message record, `dup_record`
+       (indicated with the function `lookup()` in the pseudocode below).
+       If `key_id` does not identify a secret known to the user agent,
+       the user agent discards the message and aborts.
 
-4. If `dup_record` at an offset of `offset` is true,
-   the user agent destroys the state associated with
-   this push subscription and key identifier,
-   purging them from any store the user agent maintains,
-   and then discards the message and aborts.
+   1. Assign a variable `offset` to `mseq` minus `seq`, modulo 2<sup>24</sup>.
+      If `offset` is greater than or equal to `window`,
+      the user agent discards the message and aborts.
+      (Note that the modulo operation guarantees that offset will be very large
+      if `mseq` is less than `seq`,
+      which means that old messages are discarded.)
 
-5. Assign a variable `msecret` to `secret`,
+  1. If `dup_record` at an offset of `offset` is true,
+      the user agent destroys the state associated with
+      this push subscription and key identifier,
+      purging them from any store the user agent maintains,
+      and then discards the message and aborts.
+
+2. Compute the corresponding secret.
+   Assign a variable `msecret` to `secret`,
    then invoke HKDF on that value `offset` times.
    Each time HKDF-Expand (see {{Section 2.3 of !HKDF=RFC5869}}) is invoked
    with `msecret` as the `PRK` input,
    an `info` of "secret", and a length (`L`) of 32,
    assigning the output (`OKM`) back to `msecret`.
 
-6. Then, invoke HKDF-Expand twice more,
-   each time with `msecret` as the `PRK` input,
-   as follows:
+3. Decrypt the message:
 
    {: type="a"}
-   1. An `info` input of the ASCII-encoded string "key"
-      and a length (`L`) input of 16 bytes
-      (corresponding to K_LEN for AEAD_AES_128_GCM);
-      the output (`OKM`) is assigned to a variable `key`.
+   1. Invoke HKDF-Expand twice more,
+      each time with `msecret` as the `PRK` input,
+      as follows:
 
-   1. An `info` input of the ASCII-encoded string "nonce"
-      and a length (`L`) input of 12 bytes
-      (corresponding to `N_MIN` for AEAD_AES_128_GCM);
-      the output (`OKM`) is assigned to a variable `nonce`.
+      {: type="i"}
+      1. An `info` input of the ASCII-encoded string "key"
+         and a length (`L`) input of 16 bytes
+         (corresponding to K_LEN for AEAD_AES_128_GCM);
+         the output (`OKM`) is assigned to a variable `key`.
 
-7. Invoke the decryption method (see {{Section 2.2 of AEAD}})
-   of the AEAD_AES_128_GCM AEAD (see {{Section 5.1 of AEAD}})
-   passing `ct` as C, `key` as K, `nonce` as N, and an empty associated data as A,
-   yielding either `msg` as P or an error (FAIL).
-   If an error is returned,
-   the user agent discards the message and aborts.
+      1. An `info` input of the ASCII-encoded string "nonce"
+         and a length (`L`) input of 12 bytes
+         (corresponding to `N_MIN` for AEAD_AES_128_GCM);
+         the output (`OKM`) is assigned to a variable `nonce`.
 
-8. Set the value at an offset of `offset` in `dup_record` to true.
 
-9. Assign a variable, `advance` to the greater of the following two values:
+   1. Invoke the decryption method (see {{Section 2.2 of AEAD}})
+      of the AEAD_AES_128_GCM AEAD (see {{Section 5.1 of AEAD}})
+      passing `ct` as C, `key` as K, `nonce` as N, and an empty associated data as A,
+      yielding either `plaintext` as P or an error (FAIL).
+      If an error is returned,
+      the user agent discards the message and aborts.
+
+4. Update the state for this subscription and key identifier:
 
    {: type="a"}
-   1. The number of contiguous true values from the start of `dup_record`.
-
-   1. The value of `offset` less half of `window`
+   1. Assign a variable, `advance` The value of `offset` less half of `window`
       (as this choice has no significant impact on the algorithm,
-      the value can be rounded in any direction).
+      the value can be rounded in any direction),
+      or 0, whichever is greater.
 
-10. Drop the `advance` items from the start of `dup_record`,
-    and add `advance` false values to the end.
+   1. While the value at an offset of `advance` in `dup_record` is true,
+      increase `advance` by one.
 
-11. Invoke HKDF `advance` times, as in step 5,
-    but with `secret` in place of `msecret`.
+   1. Drop the `advance` items from the start of `dup_record`,
+      and add `advance` false values to the end.
 
-12. Add `advance` to `seq`.
+   1. Invoke HKDF `advance` times, as in step 5,
+      but with `secret` in place of `msecret`.
 
-13. Return `msg` as the plaintext of the push message.
+   1. Add `advance` to `seq`.
+
+5. Parse and validate the message plaintext:
+
+   {: type="a"}
+   1. Remove any padding by dropping all trailing zero bytes from `plaintext`.
+      If this causes `plaintext` to be zero length,
+      the user agent discards the message and aborts.
+
+   1. Assign a boolean variable, `declarative`,
+      to whether the last byte of `plaintext` is 0x02 (declarative).
+
+   1. Assign a variable, `msg`, to `plaintext`,
+      with the last byte removed.
+
+6. Return `msg` as the plaintext of the push message
+   and `declarative` indicating whether the message was declarative.
 
 A pseudocode version of this procedure is shown in {{f-decrypt}}.
 
 ~~~ pseudocode
-# Parse and validate
+# Parse and validate the push message
 key_id, mseq, ct = parse(enc_request)
 secret, seq, dup_record = lookup(subscription, key_id)
 if not secret: abort
@@ -624,29 +733,35 @@ if dup_record[offset] == true:
   destroy_state(subscription, key_id)
   abort
 
-# Get secret
+# Compute the secret
 msecret = secret
-for i in 0..offset:
+repeat offset:
   msecret = hkdf.expand(msecret, "secret", 32)
 
 # Decrypt
 key = hkdf.expand(msecret, "key", 16)
 nonce = hkdf.expand(msecret, "nonce", 12)
-msg, error = aes128gcm.open(key, "", nonce, ct)
+plaintext, error = aes128gcm.open(key, "", nonce, ct)
 if error: abort
 
 # Update state
 dup_record[offset] = true
-advance = max(
-  dup_record.count_true_from_start(),
-  offset - (window / 2)
-)
-dup_record = dup_record[advance..] + [false] * advance
-for i in 0..advance:
+advance = max(0, offset - (window / 2))
+while dup_record[advance]:
+  advance = advance + 1
+dup_record = dup_record[advance:] + [false] * advance
+repeat advance:
   secret = hkdf.expand(secret, "secret", 32)
 seq = seq + advance
 
-return msg
+# Parse and validate the plaintext
+while len(plaintext) > 0 && plaintext[-1] == 0:
+  plaintext = plaintext[:-1]  # drop last byte as padding
+if len(plaintext) == 0: abort
+declarative = plaintext[-1] == 0x02
+msg = plaintext[:-1]
+
+return msg, declarative
 ~~~
 {: #f-decrypt title="Sample decryption pseudocode"}
 
@@ -655,6 +770,8 @@ it does not alter user agent state unless decryption is successful.
 All cases where the process aborts occur before state is modified.
 Once successful, state is always updated;
 in particular, the duplicate message record is updated immediately.
+It is also important that the validation of the plaintext
+occurs after the duplication message record is updated.
 
 
 ## Implementation Notes {#decrypt-notes}
@@ -674,11 +791,11 @@ However, too small a value will result in all messages being discarded.
 Implementations will therefore need to learn what value is safe to deploy.
 
 Aside from updates to the duplicate message record,
-the final steps of the exemplary algorithm,
-which update the state held by the user agent,
+those steps of the exemplary algorithm
+that update the state held by the user agent
 can be deferred and run less often.
 Push messages can arrive in batches,
-so running those steps at the end of handling a batch
+so running maintenance steps at the end of handling a batch
 rather than after every decryption
 could be more efficient.
 
@@ -749,13 +866,8 @@ A user agent MAY discard messages that contain both schemes.
 of 4096 bytes.
 This capacity includes cryptographic overheads,
 which in RFC 8291 were 103 bytes.
-The use of this symmetric encryption scheme reduces those overheads to 20 bytes:
-4 for the header and 16 for the AEAD tag.
-
-No provision is made for padding in this scheme.
-Padding of plaintext is therefore necessary
-to provide resistance against traffic analysis;
-see {{security}} for details.
+The use of this symmetric encryption scheme reduces those overheads to 21 bytes:
+4 for the header, 1 for the encrypted type, and 16 for the AEAD tag.
 
 
 # Security Considerations {#security}
@@ -790,10 +902,12 @@ without additional traffic analysis protection,
 network observers might also be able to observe these attributes of messages.
 
 Padding of the payload of messages can be used
-to obscure the precise size of the message,
-but no facility is provided in this document for padding messages.
-This differs from the RFC 8291 design,
-which was able to use the padding provided by the {{?RFC8188}} encoding.
+to obscure the exact size of the message.
+This format also provides an option for padding,
+which can pad to any size.
+The choice of padding technique used by an application
+will depend on the structure of the application
+and the sensitivity of the information carried in push messages.
 
 
 ## Secret Compromise {#compromise}
