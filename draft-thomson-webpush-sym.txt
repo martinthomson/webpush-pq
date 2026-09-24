@@ -4,9 +4,9 @@
 
 Web-Based Push Notifications                                  M. Thomson
 Internet-Draft                                                   Mozilla
-Obsoletes: 8291 (if approved)                          23 September 2026
+Obsoletes: 8291 (if approved)                          24 September 2026
 Intended status: Standards Track                                        
-Expires: 27 March 2027
+Expires: 28 March 2027
 
 
                WebPush Encryption using Symmetric Ciphers
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 27 March 2027.
+   This Internet-Draft will expire on 28 March 2027.
 
 Copyright Notice
 
@@ -79,6 +79,7 @@ Table of Contents
      2.3.  This Document
    3.  User Agent Configuration
    4.  Encrypted Push Message Format
+     4.1.  Declarative Push Messages
    5.  Push Message Encryption
    6.  Push Message Receiver Processing
      6.1.  User Agent State
@@ -225,25 +226,26 @@ Table of Contents
 
    This process is illustrated in Figure 2.
 
-   +------------+         .-----.         +------------+
-   |  secret n  +--------+ KDF s +------->| secret n+1 +--->...
-   +---+---+----+         `-----'         +---+---+----+
-       |   |                                  |   |
-       |   |      .-----.                     |   |
-       |    `----+ KDF n +--------------.     |  ...
-       |          `-----'                |
-       |          .-----.                |
-        `--------+ KDF k +----------.    |
-                  `-----'        key |   | nonce
-                                     v   v
-                                   +-------.
-   +------------+                  |        \
-   | message    +----------------->|  AEAD   +--------.
-   +------------+                  |        /          |
-                                   +-------'           |
-                                                       v
+   +------------+         .-----.                +------------+
+   |  secret n  +--------+ KDF s +-------------->| secret n+1 +---...
+   +---+---+----+         `-----'                +---+---+----+
+       |   |                                         |   |
+       |   |      .-----.                            |   |
+       |    `----+ KDF n +----------------.          |   ...
+       |          `-----'                  |
+       |          .-----.                  |
+        `--------+ KDF k +------------.    |
+                  `-----'              |   |
+                                   key |   | nonce
+                                       v   v
+                                     +-------.
+   +-----------+------+-------+      |        \
+   | message.. ‖ type | pad.. +----->|  AEAD   +--------.
+   +-----------+------+-------+      |        /          |
+                                     +-------'           |
+                                                         v
                                   +-------+--------+---------------+
-                                  | keyid |   n    | ciphertext    |
+                                  | keyid |   n    ‖ ciphertext    |
                                   +-------+--------+---------------+
 
                     Figure 2: Message Encryption Ratchet
@@ -332,14 +334,72 @@ Table of Contents
    Encrypted Push Message {
      Key Identifier (8),
      Sequence Number (24),
-     Encrypted Message Contents (..),
+     Encrypted Message Contents (136..),
    }
 
                   Figure 4: Encrypted Push Message Format
 
+   Each message contains:
+
+   Key Identifier:  A single byte that identifies the share secret that
+      was provided by the user agent.
+
+   Sequence Number:  A three-byte or 24-bit number that increments by
+      one each time the application server encrypts a message.  The
+      value can overflow safely (that is, 0x000000 comes after
+      0xffffff).
+
+   Encrypted Message Contents:  An arbitrary amount of ciphertext.  This
+      will be at least 17 bytes in length, to account for the
+      authentication tag used by the chosen cipher and the type field.
+
    Processes for the application server that sends messages are included
    in Section 5; processes for the user agent that receives messages are
    included in Section 6.
+
+   The content of a push message is shown in Figure 5.
+
+   Message Content {
+     Application Data (..),
+     Type (8) = 0x01 | 0x02,
+     Padding(..) = [0x00, ..],
+   }
+
+                   Figure 5: Push Message Content Format
+
+   The plaintext input to the AEAD function comprises:
+
+   Application Data:  An arbitrary amount of application data.
+
+   Type:  A non-zero byte that indicates the format and purpose of the
+      Application Data field. 0x01 indicates raw message data. 0x02
+      indicates the declarative format defined in Section 4.1.
+
+   Padding:  An arbitrary number of zero-valued bytes.
+
+   All non-zero push message types other than 0x01 and 0x02 are
+   reserved.  However, a user agent MUST handle any other non-zero value
+   as though it were Type 0x01 (raw).
+
+4.1.  Declarative Push Messages
+
+   The Push API defines a JSON-based format for push messages that
+   enables automated processing by an operating system or user agent
+   process; see Section 3.3 (https://www.w3.org/TR/push-
+   api/#declarative-push-message) of [PUSH-API].  This can be a
+   significantly more efficient way to handle push messages.
+
+   A declarative push message requires special handling, starting with
+   JSON parsing [JSON].  Those processes are not defined in this
+   document, with one exception below; [PUSH-API] describes those
+   processes in detail.
+
+   Assigning a dedicated type to push messages for this purpose
+   simplifies the detection of declarative push message.  When this
+   encryption scheme is used with the declarative type (0x02), the
+   "web_push" member of the declarative push message JSON object MAY be
+   omitted.  This can result in a reduction in message size of at least
+   16 bytes.
 
 5.  Push Message Encryption
 
@@ -352,10 +412,18 @@ Table of Contents
 
    *  the shared secret from the configuration, secret,
 
+   The application also optionally indicates whether the message is
+   declarative (Section 4.1) with the boolean argument declarative and
+   how much padding to include with the integer argument padding.
+
    The application then constructs an encrypted push message,
    push_message, from the plaintext of the message, msg, as follows:
 
-   1.  Invoke HKDF-Expand (see Section 2.3 of [HKDF]) with SHA-256 [SHA]
+   1.  Append a type byte to msg, either 0x01 (raw) or 0x02
+       (declarative), plus any amount of zero-valued padding bytes to
+       produce plaintext.
+
+   2.  Invoke HKDF-Expand (see Section 2.3 of [HKDF]) with SHA-256 [SHA]
        as the underlying hash function three times, each time with
        secret as the PRK input, as follows:
 
@@ -374,20 +442,21 @@ Table of Contents
            AEAD_AES_128_GCM); the output (OKM) is assigned to a variable
            nonce.
 
-   2.  Invoke the encryption method (see Section 2.1 of [AEAD]) of the
-       AEAD_AES_128_GCM AEAD (see Section 5.1 of [AEAD]) passing msg as
-       P, key as K, nonce as N, and an empty associated data as A,
-       yielding ciphertext ct as C.
+   3.  Invoke the encryption method (see Section 2.1 of [AEAD]) of the
+       AEAD_AES_128_GCM AEAD (see Section 5.1 of [AEAD]) passing
+       plaintext as P, key as K, nonce as N, and an empty associated
+       data as A, yielding ciphertext ct as C.
 
-   3.  Concatenate the values of key_id, seq, and ct, yielding an
+   4.  Concatenate the values of key_id, seq, and ct, yielding an
        encrypted push message push_message.
 
-   4.  Overwrite the value of secret with the value of next_secret and
+   5.  Overwrite the value of secret with the value of next_secret and
        the value of seq with the value (seq + 1) mod (1 << 24) (that is,
        the next 24-bit sequence number, modulo 2^24).
 
-   A pseudocode version of this procedure is shown in Figure 5.
+   A pseudocode version of this procedure is shown in Figure 6.
 
+   plaintext = concat(msg, declarative ? 0x02 : 0x01, [0] * padding)
    next_secret = hkdf.expand(secret, "secret", 32)
    key = hkdf.expand(secret, "key", 16)
    nonce = hkdf.expand(secret, "nonce", 12)
@@ -396,7 +465,7 @@ Table of Contents
    secret = next_secret
    seq = (seq + 1) & 0xff_ffff
 
-                      Figure 5: Encryption pseudocode
+                      Figure 6: Encryption pseudocode
 
    Successful use of this scheme requires that an application server not
    generate two messages with the same sequence number; see Section 9.3.
@@ -523,76 +592,94 @@ Table of Contents
 
    To decapsulate the encrypted push message, push_message:
 
-   1.   Parse push_message into key_id, mseq, and ct (indicated using
-        the function parse() in pseudocode below).
+   1.  Parse and validate the push message:
 
-   2.   The user agent is then able to use key_id and subscription to
-        find the corresponding secret, secret, sequence number, seq, and
-        duplicate message record, dup_record (indicated with the
-        function lookup() in the pseudocode below).  If key_id does not
-        identify a secret known to the user agent, the user agent
-        discards the message and aborts.
+       a.  Parse push_message into key_id, mseq, and ct (indicated using
+           the function parse() in pseudocode below).
 
-   3.   Assign a variable offset to mseq minus seq, modulo 2^24.  If
-        offset is greater than or equal to window, the user agent
-        discards the message and aborts.  (Note that the modulo
-        operation guarantees that offset will be very large if mseq is
-        less than seq, which means that old messages are discarded.)
+       b.  The user agent is then able to use key_id and subscription to
+           find the corresponding secret, secret, sequence number, seq,
+           and duplicate message record, dup_record (indicated with the
+           function lookup() in the pseudocode below).  If key_id does
+           not identify a secret known to the user agent, the user agent
+           discards the message and aborts.
 
-   4.   If dup_record at an offset of offset is true, the user agent
-        destroys the state associated with this push subscription and
-        key identifier, purging them from any store the user agent
-        maintains, and then discards the message and aborts.
+       c.  Assign a variable offset to mseq minus seq, modulo 2^24.  If
+           offset is greater than or equal to window, the user agent
+           discards the message and aborts.  (Note that the modulo
+           operation guarantees that offset will be very large if mseq
+           is less than seq, which means that old messages are
+           discarded.)
 
-   5.   Assign a variable msecret to secret, then invoke HKDF on that
-        value offset times.  Each time HKDF-Expand (see Section 2.3 of
-        [HKDF]) is invoked with msecret as the PRK input, an info of
-        "secret", and a length (L) of 32, assigning the output (OKM)
-        back to msecret.
+   2.  If dup_record at an offset of offset is true, the user agent
+       destroys the state associated with this push subscription and key
+       identifier, purging them from any store the user agent maintains,
+       and then discards the message and aborts.
 
-   6.   Then, invoke HKDF-Expand twice more, each time with msecret as
-        the PRK input, as follows:
+   3.  Compute the corresponding secret.  Assign a variable msecret to
+       secret, then invoke HKDF on that value offset times.  Each time
+       HKDF-Expand (see Section 2.3 of [HKDF]) is invoked with msecret
+       as the PRK input, an info of "secret", and a length (L) of 32,
+       assigning the output (OKM) back to msecret.
 
-        a.  An info input of the ASCII-encoded string "key" and a length
-            (L) input of 16 bytes (corresponding to K_LEN for
-            AEAD_AES_128_GCM); the output (OKM) is assigned to a
-            variable key.
+   4.  Decrypt the message:
 
-        b.  An info input of the ASCII-encoded string "nonce" and a
-            length (L) input of 12 bytes (corresponding to N_MIN for
-            AEAD_AES_128_GCM); the output (OKM) is assigned to a
-            variable nonce.
+       a.  Invoke HKDF-Expand twice more, each time with msecret as the
+           PRK input, as follows:
 
-   7.   Invoke the decryption method (see Section 2.2 of [AEAD]) of the
-        AEAD_AES_128_GCM AEAD (see Section 5.1 of [AEAD]) passing ct as
-        C, key as K, nonce as N, and an empty associated data as A,
-        yielding either msg as P or an error (FAIL).  If an error is
-        returned, the user agent discards the message and aborts.
+           i.   An info input of the ASCII-encoded string "key" and a
+                length (L) input of 16 bytes (corresponding to K_LEN for
+                AEAD_AES_128_GCM); the output (OKM) is assigned to a
+                variable key.
 
-   8.   Set the value at an offset of offset in dup_record to true.
+           ii.  An info input of the ASCII-encoded string "nonce" and a
+                length (L) input of 12 bytes (corresponding to N_MIN for
+                AEAD_AES_128_GCM); the output (OKM) is assigned to a
+                variable nonce.
 
-   9.   Assign a variable, advance to the greater of the following two
-        values:
+       b.  Invoke the decryption method (see Section 2.2 of [AEAD]) of
+           the AEAD_AES_128_GCM AEAD (see Section 5.1 of [AEAD]) passing
+           ct as C, key as K, nonce as N, and an empty associated data
+           as A, yielding either plaintext as P or an error (FAIL).  If
+           an error is returned, the user agent discards the message and
+           aborts.
 
-        a.  The number of contiguous true values from the start of
-            dup_record.
+   5.  Update the state for this subscription and key identifier:
 
-        b.  The value of offset less half of window (rounded in any
-            direction, if necessary).
+       a.  Assign a variable, advance The value of offset less half of
+           window (as this choice has no significant impact on the
+           algorithm, the value can be rounded in any direction), or 0,
+           whichever is greater.
 
-   10.  Drop the advance items from the start of dup_record, and add
-        advance false values to the end.
+       b.  While the value at an offset of advance in dup_record is
+           true, increase advance by one.
 
-   11.  Invoke HKDF advance times, as in step 5, but with secret in
-        place of msecret.
+       c.  Drop the advance items from the start of dup_record, and add
+           advance false values to the end.
 
-   12.  Add advance to seq.
+       d.  Invoke HKDF advance times, as in step 5, but with secret in
+           place of msecret.
 
-   13.  Return msg as the plaintext of the push message.
+       e.  Add advance to seq.
 
-   A pseudocode version of this procedure is shown in Figure 6.
+   6.  Parse and validate the message plaintext:
 
-   # Parse and validate
+       a.  Remove any padding by dropping all trailing zero bytes from
+           plaintext.  If this causes plaintext to be zero length, the
+           user agent discards the message and aborts.
+
+       b.  Assign a boolean variable, declarative, to whether the last
+           byte of plaintext is 0x02 (declarative).
+
+       c.  Assign a variable, msg, to plaintext, with the last byte
+           removed.
+
+   7.  Return msg as the plaintext of the push message and declarative
+       indicating whether the message was declarative.
+
+   A pseudocode version of this procedure is shown in Figure 7.
+
+   # Parse and validate the push message
    key_id, mseq, ct = parse(enc_request)
    secret, seq, dup_record = lookup(subscription, key_id)
    if not secret: abort
@@ -602,37 +689,44 @@ Table of Contents
      destroy_state(subscription, key_id)
      abort
 
-   # Get secret
+   # Compute the secret
    msecret = secret
-   for i in 0..offset:
+   repeat offset:
      msecret = hkdf.expand(msecret, "secret", 32)
 
    # Decrypt
    key = hkdf.expand(msecret, "key", 16)
    nonce = hkdf.expand(msecret, "nonce", 12)
-   msg, error = aes128gcm.open(key, "", nonce, ct)
+   plaintext, error = aes128gcm.open(key, "", nonce, ct)
    if error: abort
 
    # Update state
    dup_record[offset] = true
-   advance = max(
-     dup_record.count_true_from_start(),
-     offset - (window / 2)
-   )
-   dup_record = dup_record[advance..] + [false] * advance
-   for i in 0..advance:
+   advance = max(0, offset - (window / 2))
+   while dup_record[advance]:
+     advance = advance + 1
+   dup_record = dup_record[advance:] + [false] * advance
+   repeat advance:
      secret = hkdf.expand(secret, "secret", 32)
    seq = seq + advance
 
-   return msg
+   # Parse and validate the plaintext
+   while len(plaintext) > 0 && plaintext[-1] == 0:
+     plaintext = plaintext[:-1]  # drop last byte as padding
+   if len(plaintext) == 0: abort
+   declarative = plaintext[-1] == 0x02
+   msg = plaintext[:-1]
 
-                   Figure 6: Sample decryption pseudocode
+   return msg, declarative
+
+                   Figure 7: Sample decryption pseudocode
 
    An important property of this algorithm is that it does not alter
    user agent state unless decryption is successful.  All cases where
    the process aborts occur before state is modified.  Once successful,
    state is always updated; in particular, the duplicate message record
-   is updated immediately.
+   is updated immediately.  It is also important that the validation of
+   the plaintext occurs after the duplication message record is updated.
 
 6.4.  Implementation Notes
 
@@ -649,10 +743,10 @@ Table of Contents
    value will result in all messages being discarded.  Implementations
    will therefore need to learn what value is safe to deploy.
 
-   Aside from updates to the duplicate message record, the final steps
-   of the exemplary algorithm, which update the state held by the user
-   agent, can be deferred and run less often.  Push messages can arrive
-   in batches, so running those steps at the end of handling a batch
+   Aside from updates to the duplicate message record, those steps of
+   the exemplary algorithm that update the state held by the user agent
+   can be deferred and run less often.  Push messages can arrive in
+   batches, so running maintenance steps at the end of handling a batch
    rather than after every decryption could be more efficient.
 
    Concurrent decryption for the same push subscription and key
@@ -716,12 +810,8 @@ Table of Contents
    Section 4 of [RFC8291] recommends that push services support
    ciphertext of 4096 bytes.  This capacity includes cryptographic
    overheads, which in RFC 8291 were 103 bytes.  The use of this
-   symmetric encryption scheme reduces those overheads to 20 bytes: 4
-   for the header and 16 for the AEAD tag.
-
-   No provision is made for padding in this scheme.  Padding of
-   plaintext is therefore necessary to provide resistance against
-   traffic analysis; see Section 9 for details.
+   symmetric encryption scheme reduces those overheads to 21 bytes: 4
+   for the header, 1 for the encrypted type, and 16 for the AEAD tag.
 
 9.  Security Considerations
 
@@ -751,10 +841,12 @@ Table of Contents
    without additional traffic analysis protection, network observers
    might also be able to observe these attributes of messages.
 
-   Padding of the payload of messages can be used to obscure the precise
-   size of the message, but no facility is provided in this document for
-   padding messages.  This differs from the RFC 8291 design, which was
-   able to use the padding provided by the [RFC8188] encoding.
+   Padding of the payload of messages can be used to obscure the exact
+   size of the message.  This format also provides an option for
+   padding, which can pad to any size.  The choice of padding technique
+   used by an application will depend on the structure of the
+   application and the sensitivity of the information carried in push
+   messages.
 
 9.2.  Secret Compromise
 
@@ -925,6 +1017,11 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-
               aead-limits-13>.
 
+   [JSON]     Bray, T., Ed., "The JavaScript Object Notation (JSON) Data
+              Interchange Format", STD 90, RFC 8259,
+              DOI 10.17487/RFC8259, December 2017,
+              <https://www.rfc-editor.org/rfc/rfc8259>.
+
    [PQC-GUIDE]
               Banerjee, A., Reddy.K, T., Schoinianakis, D., Hollebeek,
               T., and M. Ounsworth, "Post-Quantum Cryptography for
@@ -951,7 +1048,7 @@ Table of Contents
 
    [WEBPUSH-HPKE]
               Thomson, M., "WebPush Encryption using HPKE", Work in
-              Progress, Internet-Draft, draft-thomson-webpush-hpke, 23
+              Progress, Internet-Draft, draft-thomson-webpush-hpke, 24
               September 2026, <https://datatracker.ietf.org/doc/html/
               draft-thomson-webpush-hpke>.
 
