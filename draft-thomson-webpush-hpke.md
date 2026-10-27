@@ -19,8 +19,8 @@ venue:
   type: "Working Group"
   mail: "webpush@ietf.org"
   arch: "https://mailarchive.ietf.org/arch/browse/webpush/"
-  github: "martinthomson/webpush-hpke"
-  latest: "https://martinthomson.github.io/webpush-hpke/draft-thomson-webpush-hpke.html"
+  github: "martinthomson/webpush-pq"
+  latest: "https://martinthomson.github.io/webpush-pq/draft-thomson-webpush-hpke.html"
 
 author:
  -
