@@ -4,9 +4,9 @@
 
 Web-Based Push Notifications                                  M. Thomson
 Internet-Draft                                                   Mozilla
-Obsoletes: 8291 (if approved)                          24 September 2026
+Obsoletes: 8291 (if approved)                            27 October 2026
 Intended status: Standards Track                                        
-Expires: 28 March 2027
+Expires: 30 April 2027
 
 
                      WebPush Encryption using HPKE
@@ -24,7 +24,7 @@ About This Document
    This note is to be removed before publishing as an RFC.
 
    The latest revision of this draft can be found at
-   https://martinthomson.github.io/webpush-hpke/draft-thomson-webpush-
+   https://martinthomson.github.io/webpush-pq/draft-thomson-webpush-
    hpke.html.  Status information for this document may be found at
    https://datatracker.ietf.org/doc/draft-thomson-webpush-hpke/.
 
@@ -35,7 +35,7 @@ About This Document
    webpush/.
 
    Source for this draft and an issue tracker can be found at
-   https://github.com/martinthomson/webpush-hpke.
+   https://github.com/martinthomson/webpush-pq.
 
 Status of This Memo
 
@@ -52,7 +52,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 March 2027.
+   This Internet-Draft will expire on 30 April 2027.
 
 Copyright Notice
 
@@ -506,9 +506,9 @@ Table of Contents
 
    [HPKE]     Barnes, R., Bhargavan, K., Lipp, B., and C. A. Wood,
               "Hybrid Public Key Encryption", Work in Progress,
-              Internet-Draft, draft-ietf-hpke-hpke-04, 6 July 2026,
-              <https://datatracker.ietf.org/doc/html/draft-ietf-hpke-
-              hpke-04>.
+              Internet-Draft, draft-ietf-hpke-hpke-05, 25 September
+              2026, <https://datatracker.ietf.org/doc/html/draft-ietf-
+              hpke-hpke-05>.
 
    [HPKE-PQ]  Barnes, R. and D. Connolly, "Post-Quantum and Post-
               Quantum/Traditional Hybrid Algorithms for HPKE", Work in
@@ -573,7 +573,7 @@ Table of Contents
    [WEBPUSH-SYM]
               Thomson, M., "WebPush Encryption using Symmetric Ciphers",
               Work in Progress, Internet-Draft, draft-thomson-webpush-
-              sym, 24 September 2026,
+              sym, 27 October 2026,
               <https://datatracker.ietf.org/doc/html/draft-thomson-
               webpush-sym>.
 
